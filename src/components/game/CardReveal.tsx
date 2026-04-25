@@ -17,9 +17,11 @@ export default function CardReveal({ card }: Props) {
       <Text style={[styles.typeLabel, { color: typeColor }]}>{typeLabel}</Text>
       <SpiceBadge level={card.level} />
       <Text style={styles.cardText}>{card.text}</Text>
-      {card.type === 'dare' && (
-        <Text style={styles.timerNote}>⏱ {card.timerSeconds ?? 30} seconds</Text>
-      )}
+      {card.type === 'dare' && (() => {
+        const t = card.timerSeconds ?? 30;
+        const display = t >= 60 ? `${t / 60} min` : `${t} sec`;
+        return <Text style={styles.timerNote}>⏱ {display}</Text>;
+      })()}
     </View>
   );
 }

@@ -70,7 +70,13 @@ export default function CountdownTimer({ seconds, onComplete }: Props) {
       </Svg>
       <View style={StyleSheet.absoluteFill}>
         <View style={styles.center}>
-          <Text style={[styles.number, { color: timerColor }]}>{timeLeft}</Text>
+          {seconds >= 60 ? (
+            <Text style={[styles.number, styles.numberSmall, { color: timerColor }]}>
+              {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
+            </Text>
+          ) : (
+            <Text style={[styles.number, { color: timerColor }]}>{timeLeft}</Text>
+          )}
         </View>
       </View>
     </View>
@@ -92,5 +98,8 @@ const styles = StyleSheet.create({
   number: {
     fontSize: 32,
     fontWeight: '900',
+  },
+  numberSmall: {
+    fontSize: 22,
   },
 });
