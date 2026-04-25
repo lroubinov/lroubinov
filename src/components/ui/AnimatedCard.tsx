@@ -22,7 +22,6 @@ const AnimatedCard = forwardRef<AnimatedCardRef, Props>(({ frontContent, onFlipC
   useImperativeHandle(ref, () => ({
     flip: () => {
       rotation.value = withTiming(1, { duration: 400 }, (finished) => {
-        'worklet';
         if (finished && onComplete) {
           runOnJS(onComplete)();
         }
