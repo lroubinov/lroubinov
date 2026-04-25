@@ -1,7 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { ActivityIndicator, Animated, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
 import { Colors } from '../../constants/colors';
 
 interface Props {
@@ -14,43 +13,39 @@ interface Props {
   fontSize?: number;
 }
 
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
-
 export default function GlowButton({ label, onPress, colors = Colors.gradient.gold, disabled, loading, style, fontSize = 18 }: Props) {
-  const scale = useSharedValue(1);
-  const glow = useSharedValue(0.6);
+  const scale = useRef(new Animated.Value(1)).current;
+  const glow = useRef(new Animated.Value(0.7)).current;
 
-  React.useEffect(() => {
-    glow.value = withRepeat(withSequence(withTiming(1, { duration: 1200 }), withTiming(0.6, { duration: 1200 })), -1, false);
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1, duration: 1200, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0.7, duration: 1200, useNativeDriver: true }),
+      ])
+    ).start();
   }, []);
 
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: disabled ? 0.4 : 1,
-  }));
-
   const handlePress = () => {
-    scale.value = withSpring(0.95, { damping: 12 }, () => {
-      scale.value = withSpring(1);
-    });
+    Animated.sequence([
+      Animated.timing(scale, { toValue: 0.95, duration: 80, useNativeDriver: true }),
+      Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: true }),
+    ]).start();
     onPress();
   };
 
   return (
-    <AnimatedTouchable
-      onPress={handlePress}
-      disabled={disabled || loading}
-      activeOpacity={0.85}
-      style={[animStyle, style]}
-    >
-      <LinearGradient colors={colors} style={styles.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-        {loading ? (
-          <ActivityIndicator color={Colors.text.primary} />
-        ) : (
-          <Text style={[styles.label, { fontSize }]}>{label}</Text>
-        )}
-      </LinearGradient>
-    </AnimatedTouchable>
+    <Animated.View style={[{ transform: [{ scale }], opacity: disabled ? 0.4 : glow }, style]}>
+      <TouchableOpacity onPress={handlePress} disabled={disabled || loading} activeOpacity={0.85}>
+        <LinearGradient colors={colors} style={styles.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          {loading ? (
+            <ActivityIndicator color={Colors.text.primary} />
+          ) : (
+            <Text style={[styles.label, { fontSize }]}>{label}</Text>
+          )}
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 

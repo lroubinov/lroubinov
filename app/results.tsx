@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
-import React, { useEffect } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import GlowButton from '../src/components/ui/GlowButton';
 import GradientBackground from '../src/components/ui/GradientBackground';
 import { Colors } from '../src/constants/colors';
@@ -10,18 +9,19 @@ import { useGameStore } from '../src/store/gameStore';
 export default function ResultsScreen() {
   const { gameState, resetGame, startGame } = useGameStore();
 
-  const winnerScale = useSharedValue(0.5);
-  const winnerOpacity = useSharedValue(0);
+  const winnerScale = useRef(new Animated.Value(0.5)).current;
+  const winnerOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    winnerOpacity.value = withDelay(200, withTiming(1, { duration: 400 }));
-    winnerScale.value = withDelay(200, withSpring(1, { damping: 10 }));
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(winnerOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.spring(winnerScale, { toValue: 1, damping: 10, useNativeDriver: true }),
+      ]).start();
+    }, 200);
   }, []);
 
-  const winnerStyle = useAnimatedStyle(() => ({
-    opacity: winnerOpacity.value,
-    transform: [{ scale: winnerScale.value }],
-  }));
+  const winnerStyle = { opacity: winnerOpacity, transform: [{ scale: winnerScale }] };
 
   if (!gameState) {
     router.replace('/');

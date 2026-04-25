@@ -1,7 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { forwardRef, useImperativeHandle } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import React, { forwardRef, useImperativeHandle, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Colors } from '../../constants/colors';
 
 export interface AnimatedCardRef {
@@ -15,43 +14,29 @@ interface Props {
 }
 
 const AnimatedCard = forwardRef<AnimatedCardRef, Props>(({ frontContent, onFlipComplete }, ref) => {
-  const rotation = useSharedValue(0);
-
-  const onComplete = onFlipComplete;
+  const rotation = useRef(new Animated.Value(0)).current;
 
   useImperativeHandle(ref, () => ({
     flip: () => {
-      rotation.value = withTiming(1, { duration: 400 }, (finished) => {
-        if (finished && onComplete) {
-          runOnJS(onComplete)();
-        }
+      Animated.timing(rotation, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished && onFlipComplete) onFlipComplete();
       });
     },
     reset: () => {
-      rotation.value = 0;
+      rotation.setValue(0);
     },
   }));
 
-  const backStyle = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 1000 },
-      { rotateY: `${interpolate(rotation.value, [0, 1], [0, 180])}deg` },
-    ],
-    backfaceVisibility: 'hidden',
-  }));
-
-  const frontStyle = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 1000 },
-      { rotateY: `${interpolate(rotation.value, [0, 1], [-180, 0])}deg` },
-    ],
-    backfaceVisibility: 'hidden',
-  }));
+  const backRotateY = rotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+  const frontRotateY = rotation.interpolate({ inputRange: [0, 1], outputRange: ['-180deg', '0deg'] });
 
   return (
     <View style={styles.container}>
-      {/* Back face */}
-      <Animated.View style={[StyleSheet.absoluteFill, backStyle]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ perspective: 1000 }, { rotateY: backRotateY }], backfaceVisibility: 'hidden' }]}>
         <LinearGradient colors={Colors.gradient.card} style={styles.card}>
           <Text style={styles.backLogo}>🔥</Text>
           <Text style={styles.backTitle}>IGNITE</Text>
@@ -59,8 +44,7 @@ const AnimatedCard = forwardRef<AnimatedCardRef, Props>(({ frontContent, onFlipC
         </LinearGradient>
       </Animated.View>
 
-      {/* Front face */}
-      <Animated.View style={[StyleSheet.absoluteFill, frontStyle]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ perspective: 1000 }, { rotateY: frontRotateY }], backfaceVisibility: 'hidden' }]}>
         <LinearGradient colors={Colors.gradient.card} style={styles.card}>
           {frontContent}
         </LinearGradient>
@@ -86,20 +70,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backLogo: {
-    fontSize: 48,
-    marginBottom: 8,
-  },
-  backTitle: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: Colors.brand.gold,
-    letterSpacing: 6,
-  },
-  backSub: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-    marginTop: 4,
-    fontStyle: 'italic',
-  },
+  backLogo: { fontSize: 48, marginBottom: 8 },
+  backTitle: { fontSize: 32, fontWeight: '900', color: Colors.brand.gold, letterSpacing: 6 },
+  backSub: { fontSize: 14, color: Colors.text.secondary, marginTop: 4, fontStyle: 'italic' },
 });
