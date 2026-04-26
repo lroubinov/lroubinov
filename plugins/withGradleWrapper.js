@@ -1,10 +1,9 @@
-const { withDangerousMod } = require('@expo/config-plugins');
+const { withDangerousMod, withAppBuildGradle } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
-// Gradle 9 removed Groovy's String.execute() API which React Native build
-// scripts rely on. Pin to Gradle 8.13 to avoid the getAbsolutePath() crash.
-module.exports = (config) => {
+// Pin Gradle to 8.x to avoid Gradle 9 breaking changes.
+function withGradle8(config) {
   return withDangerousMod(config, [
     'android',
     (config) => {
@@ -23,4 +22,22 @@ module.exports = (config) => {
       return config;
     },
   ]);
+}
+
+// RN 0.81 bundles hermesc inside react-native/sdks/hermesc, not as a separate
+// hermes-compiler npm package. Fix the generated build.gradle hermesCommand.
+function withHermesCommandFix(config) {
+  return withAppBuildGradle(config, (config) => {
+    config.modResults.contents = config.modResults.contents.replace(
+      /hermesCommand\s*=\s*new File\([^\n]*hermes-compiler[^\n]*\n/,
+      'hermesCommand = new File(["node", "--print", "require.resolve(\'react-native/package.json\')"].execute(null, rootDir).text.trim()).getParentFile().getAbsolutePath() + "/sdks/hermesc/%OS-BIN%/hermesc"\n'
+    );
+    return config;
+  });
+}
+
+module.exports = (config) => {
+  config = withGradle8(config);
+  config = withHermesCommandFix(config);
+  return config;
 };
