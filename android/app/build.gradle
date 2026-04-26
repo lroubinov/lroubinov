@@ -2,6 +2,10 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// DIAGNOSTIC: print line 14 so we can see what EAS actually uses
+def buildGradleLines = file("$projectDir/build.gradle").readLines()
+println("### IGNITE_DIAGNOSTIC line14: " + (buildGradleLines.size() >= 14 ? buildGradleLines[13] : "N/A") + " ###")
+
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
 /**
