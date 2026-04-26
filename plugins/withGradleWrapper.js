@@ -24,13 +24,13 @@ function withGradle8(config) {
   ]);
 }
 
-// RN 0.81 bundles hermesc inside react-native/sdks/hermesc, not as a separate
-// hermes-compiler npm package. Fix the generated build.gradle hermesCommand.
+// Remove hermesCommand so RN Gradle plugin uses its built-in fallback to
+// node_modules/react-native/sdks/hermesc — avoids broken hermes-compiler resolve.
 function withHermesCommandFix(config) {
   return withAppBuildGradle(config, (config) => {
     config.modResults.contents = config.modResults.contents.replace(
-      /hermesCommand\s*=\s*new File\([^\n]*hermes-compiler[^\n]*\n/,
-      'hermesCommand = new File(["node", "--print", "require.resolve(\'react-native/package.json\')"].execute(null, rootDir).text.trim()).getParentFile().getAbsolutePath() + "/sdks/hermesc/%OS-BIN%/hermesc"\n'
+      /\s*hermesCommand\s*=.*\n/,
+      '\n'
     );
     return config;
   });
