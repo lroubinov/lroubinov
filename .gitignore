@@ -38,4 +38,4 @@ yarn-error.*
 
 # generated native folders
 /ios
-/android
+# /android is committed so EAS can use it directly (prebuildCommand: null)

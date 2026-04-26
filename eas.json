@@ -8,6 +8,7 @@
       "distribution": "internal"
     },
     "preview": {
+      "prebuildCommand": null,
       "distribution": "internal",
       "android": {
         "buildType": "apk"
