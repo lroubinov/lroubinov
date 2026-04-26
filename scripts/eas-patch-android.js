@@ -20,19 +20,24 @@ const wrapperProps = path.join(projectRoot, 'android', 'gradle', 'wrapper', 'gra
 if (fs.existsSync(buildGradle)) {
   let content = fs.readFileSync(buildGradle, 'utf8');
 
-  // 1. Delete hermesCommand line entirely
-  content = content.split('\n').filter(line => !line.includes('hermesCommand')).join('\n');
-
-  // 2. Replace fragile node-resolution for reactNativeDir
+  // Remove all lines that use .execute() for node-resolution — replace with
+  // static projectRoot-relative paths that never fail at runtime.
   content = content.replace(
-    /reactNativeDir\s*=\s*new File\(.*\)\.getParentFile\(\)\.getAbsoluteFile\(\)/,
+    /entryFile\s*=\s*file\(.*\.execute\(.*\).*\)/,
+    'entryFile = file(projectRoot + "/node_modules/expo-router/entry.js")'
+  );
+  content = content.replace(
+    /reactNativeDir\s*=\s*new File\(.*\.execute\(.*\).*\)/,
     'reactNativeDir = new File(projectRoot + "/node_modules/react-native")'
   );
-
-  // 3. Replace fragile node-resolution for codegenDir
+  content = content.split('\n').filter(line => !line.includes('hermesCommand')).join('\n');
   content = content.replace(
-    /codegenDir\s*=\s*new File\(.*\)\.getParentFile\(\)\.getAbsoluteFile\(\)/,
+    /codegenDir\s*=\s*new File\(.*\.execute\(.*\).*\)/,
     'codegenDir = new File(projectRoot + "/node_modules/@react-native/codegen")'
+  );
+  content = content.replace(
+    /cliFile\s*=\s*new File\(.*\.execute\(.*\).*\)/,
+    'cliFile = new File(projectRoot + "/node_modules/@expo/cli/build/bin/cli")'
   );
 
   fs.writeFileSync(buildGradle, content);
