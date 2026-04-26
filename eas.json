@@ -8,7 +8,7 @@
       "distribution": "internal"
     },
     "preview": {
-      "prebuildCommand": "echo 'skip prebuild'",
+      "prebuildCommand": "node scripts/eas-patch-android.js",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
