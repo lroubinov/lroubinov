@@ -39,12 +39,6 @@ jobs:
       - name: Install JS dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Run Expo prebuild (generate Android native project)
-        run: npx expo prebuild --platform android --no-install
-
-      - name: Patch build.gradle and pin Gradle wrapper to 8.13
-        run: node scripts/eas-patch-android.js
-
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
