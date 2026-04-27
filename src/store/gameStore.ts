@@ -10,6 +10,7 @@ interface SetupState {
   player1Name: string;
   player2Name: string;
   enabledLevels: SpiceLevel[];
+  customCards: Card[];
 }
 
 interface GameStore extends SetupState {
@@ -18,6 +19,8 @@ interface GameStore extends SetupState {
   // Setup
   setPlayerNames: (p1: string, p2: string) => void;
   setEnabledLevels: (levels: SpiceLevel[]) => void;
+  addCustomCard: (text: string, type: CardType) => void;
+  removeCustomCard: (id: string) => void;
   startGame: () => void;
 
   // In-game
@@ -68,14 +71,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
   player1Name: '',
   player2Name: '',
   enabledLevels: ['hot'],
+  customCards: [],
   gameState: null,
 
   setPlayerNames: (p1, p2) => set({ player1Name: p1, player2Name: p2 }),
   setEnabledLevels: (levels) => set({ enabledLevels: levels }),
 
+  addCustomCard: (text, type) => {
+    const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const card: Card = { id, type, level: 'hot', text };
+    set((s) => ({ customCards: [...s.customCards, card] }));
+  },
+
+  removeCustomCard: (id) =>
+    set((s) => ({ customCards: s.customCards.filter((c) => c.id !== id) })),
+
   startGame: () => {
-    const { player1Name, player2Name, enabledLevels } = get();
-    const deck = buildDeck(enabledLevels, truths, dares);
+    const { player1Name, player2Name, enabledLevels, customCards } = get();
+    const deck = [...buildDeck(enabledLevels, truths, dares), ...shuffleArray(customCards)];
     const config: GameConfig = {
       players: [makePlayer(1, player1Name), makePlayer(2, player2Name)],
       enabledLevels,

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ActionButtons from '../src/components/game/ActionButtons';
 import CardReveal from '../src/components/game/CardReveal';
 import CountdownTimer from '../src/components/game/CountdownTimer';
@@ -87,6 +87,9 @@ export default function GameScreen() {
               seconds={gs.currentCard?.timerSeconds ?? 30}
               onComplete={onTimerComplete}
             />
+            <TouchableOpacity style={styles.skipTimer} onPress={onTimerComplete}>
+              <Text style={styles.skipTimerText}>Skip Timer ⏭</Text>
+            </TouchableOpacity>
           </>
         )}
 
@@ -121,5 +124,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 16,
     letterSpacing: 1,
+  },
+  skipTimer: {
+    alignSelf: 'center',
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.text.muted,
+  },
+  skipTimerText: {
+    color: Colors.text.muted,
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
