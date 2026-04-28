@@ -1,16 +1,21 @@
 import { create } from 'zustand';
-import { Card, CardType, ForfeitCard, GameConfig, GamePhase, GameState, Player, SpiceLevel } from '../data/types';
+import { Lang } from '../i18n';
+import { Card, CardType, ForfeitCard, GameConfig, GamePhase, GameRounds, GameState, Player, SpiceLevel } from '../data/types';
 import { truths } from '../data/truths';
 import { dares } from '../data/dares';
 import { forfeits } from '../data/forfeits';
 import { buildDeck } from '../utils/deckBuilder';
 import { shuffleArray } from '../utils/shuffle';
 
+const MAX_SKIPS = 3;
+
 interface SetupState {
   player1Name: string;
   player2Name: string;
   enabledLevels: SpiceLevel[];
   customCards: Card[];
+  gameRounds: GameRounds;
+  language: Lang;
 }
 
 interface GameStore extends SetupState {
@@ -19,8 +24,11 @@ interface GameStore extends SetupState {
   // Setup
   setPlayerNames: (p1: string, p2: string) => void;
   setEnabledLevels: (levels: SpiceLevel[]) => void;
+  setGameRounds: (rounds: GameRounds) => void;
+  setLanguage: (lang: Lang) => void;
   addCustomCard: (text: string, type: CardType) => void;
   removeCustomCard: (id: string) => void;
+  addCustomCards: (cards: Card[]) => void;
   startGame: () => void;
 
   // In-game
@@ -30,6 +38,7 @@ interface GameStore extends SetupState {
   completeTurn: () => void;
   skipTurn: () => void;
   completeForfeit: () => void;
+  endGame: () => void;
   resetGame: () => void;
 }
 
@@ -41,13 +50,11 @@ function drawCard(deck: Card[], discardPile: Card[], levels: SpiceLevel[], type:
   let available = deck.filter((c) => c.type === type);
 
   if (available.length === 0) {
-    // Reshuffle discard pile back in (filtered by type)
     const recycled = shuffleArray(discardPile.filter((c) => c.type === type && levels.includes(c.level)));
     available = recycled;
     discardPile = discardPile.filter((c) => c.type !== type || !levels.includes(c.level));
     deck = [...deck.filter((c) => c.type !== type), ...recycled];
     if (available.length === 0) {
-      // Fallback: rebuild from scratch
       const fresh = buildDeck(levels, truths, dares);
       available = fresh.filter((c) => c.type === type);
       deck = fresh;
@@ -72,10 +79,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
   player2Name: '',
   enabledLevels: ['hot'],
   customCards: [],
+  gameRounds: 10,
+  language: 'en',
   gameState: null,
 
   setPlayerNames: (p1, p2) => set({ player1Name: p1, player2Name: p2 }),
   setEnabledLevels: (levels) => set({ enabledLevels: levels }),
+  setGameRounds: (rounds) => set({ gameRounds: rounds }),
+  setLanguage: (lang) => set({ language: lang }),
 
   addCustomCard: (text, type) => {
     const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -86,13 +97,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
   removeCustomCard: (id) =>
     set((s) => ({ customCards: s.customCards.filter((c) => c.id !== id) })),
 
+  addCustomCards: (cards) =>
+    set((s) => ({ customCards: [...s.customCards, ...cards] })),
+
   startGame: () => {
-    const { player1Name, player2Name, enabledLevels, customCards } = get();
+    const { player1Name, player2Name, enabledLevels, customCards, gameRounds } = get();
     const deck = [...buildDeck(enabledLevels, truths, dares), ...shuffleArray(customCards)];
     const config: GameConfig = {
       players: [makePlayer(1, player1Name), makePlayer(2, player2Name)],
       enabledLevels,
-      totalRounds: 10,
+      totalRounds: gameRounds,
     };
     const state: GameState = {
       config,
@@ -103,6 +117,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       phase: 'choosing',
       turnNumber: 1,
       pendingForfeit: null,
+      skipsRemaining: MAX_SKIPS,
     };
     set({ gameState: state });
   },
@@ -125,7 +140,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   onRevealComplete: () => {
     const gs = get().gameState;
     if (!gs || gs.phase !== 'revealing') return;
-    const nextPhase: GamePhase = gs.currentCard?.type === 'dare' ? 'timer_running' : 'awaiting_done';
+    const nextPhase: GamePhase = gs.currentCard?.type === 'dare' && gs.currentCard?.timerSeconds
+      ? 'timer_running'
+      : 'awaiting_done';
     set({ gameState: { ...gs, phase: nextPhase } });
   },
 
@@ -145,7 +162,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     };
     const nextIndex: 0 | 1 = gs.currentPlayerIndex === 0 ? 1 : 0;
     const nextTurn = gs.turnNumber + 1;
-    const gameOver = nextTurn > gs.config.totalRounds * 2;
+    const gameOver = gs.config.totalRounds !== null && nextTurn > gs.config.totalRounds * 2;
     set({
       gameState: {
         ...gs,
@@ -161,20 +178,34 @@ export const useGameStore = create<GameStore>((set, get) => ({
   skipTurn: () => {
     const gs = get().gameState;
     if (!gs || gs.phase !== 'awaiting_done') return;
-    const players = [...gs.config.players] as [Player, Player];
-    players[gs.currentPlayerIndex] = {
-      ...players[gs.currentPlayerIndex],
-      forfeitsOwed: players[gs.currentPlayerIndex].forfeitsOwed + 1,
-    };
-    const forfeit = pickForfeit(gs.config.enabledLevels);
-    set({
-      gameState: {
-        ...gs,
-        config: { ...gs.config, players },
-        pendingForfeit: forfeit,
-        phase: 'forfeit',
-      },
-    });
+
+    if (gs.skipsRemaining > 0) {
+      // Re-draw: go back to choosing with one skip consumed
+      set({
+        gameState: {
+          ...gs,
+          skipsRemaining: gs.skipsRemaining - 1,
+          currentCard: null,
+          phase: 'choosing',
+        },
+      });
+    } else {
+      // No skips left → forfeit
+      const players = [...gs.config.players] as [Player, Player];
+      players[gs.currentPlayerIndex] = {
+        ...players[gs.currentPlayerIndex],
+        forfeitsOwed: players[gs.currentPlayerIndex].forfeitsOwed + 1,
+      };
+      const forfeit = pickForfeit(gs.config.enabledLevels);
+      set({
+        gameState: {
+          ...gs,
+          config: { ...gs.config, players },
+          pendingForfeit: forfeit,
+          phase: 'forfeit',
+        },
+      });
+    }
   },
 
   completeForfeit: () => {
@@ -182,7 +213,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!gs || gs.phase !== 'forfeit') return;
     const nextIndex: 0 | 1 = gs.currentPlayerIndex === 0 ? 1 : 0;
     const nextTurn = gs.turnNumber + 1;
-    const gameOver = nextTurn > gs.config.totalRounds * 2;
+    const gameOver = gs.config.totalRounds !== null && nextTurn > gs.config.totalRounds * 2;
     set({
       gameState: {
         ...gs,
@@ -193,6 +224,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         turnNumber: nextTurn,
       },
     });
+  },
+
+  endGame: () => {
+    const gs = get().gameState;
+    if (!gs) return;
+    set({ gameState: { ...gs, phase: 'game_over' } });
   },
 
   resetGame: () => set({ gameState: null }),

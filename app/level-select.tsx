@@ -1,33 +1,33 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import GlowButton from '../src/components/ui/GlowButton';
 import GradientBackground from '../src/components/ui/GradientBackground';
 import { Colors } from '../src/constants/colors';
-import { CardType, SpiceLevel } from '../src/data/types';
+import { SpiceLevel } from '../src/data/types';
+import { tr } from '../src/i18n';
 import { useGameStore } from '../src/store/gameStore';
 
 interface LevelOption {
   level: SpiceLevel;
   emoji: string;
-  name: string;
-  description: string;
+  nameKey: string;
+  descKey: string;
   color: string;
   border: string;
 }
 
 const LEVELS: LevelOption[] = [
-  { level: 'hot', emoji: '🌶️', name: 'Hot', description: 'Sensual & teasing — the slow burn. Flirty dares and intimate truths.', color: Colors.level.hot.bg, border: Colors.level.hot.border },
-  { level: 'scorching', emoji: '💥', name: 'Scorching', description: 'Explicit — things will heat up. Bold truths, steamy dares.', color: Colors.level.scorching.bg, border: Colors.level.scorching.border },
-  { level: 'hardcore', emoji: '🔥', name: 'Hardcore', description: 'No limits — for the brave. Adults only. 18+', color: Colors.level.hardcore.bg, border: Colors.level.hardcore.border },
+  { level: 'hot', emoji: '🌶️', nameKey: 'hotName', descKey: 'hotDesc', color: Colors.level.hot.bg, border: Colors.level.hot.border },
+  { level: 'scorching', emoji: '💥', nameKey: 'scorchingName', descKey: 'scorchingDesc', color: Colors.level.scorching.bg, border: Colors.level.scorching.border },
+  { level: 'hardcore', emoji: '🔥', nameKey: 'hardcoreName', descKey: 'hardcoreDesc', color: Colors.level.hardcore.bg, border: Colors.level.hardcore.border },
 ];
 
 export default function LevelSelectScreen() {
   const [selected, setSelected] = useState<SpiceLevel[]>(['hot']);
-  const [showCustom, setShowCustom] = useState(false);
-  const [customText, setCustomText] = useState('');
-  const [customType, setCustomType] = useState<CardType>('dare');
-  const { setEnabledLevels, startGame, customCards, addCustomCard, removeCustomCard } = useGameStore();
+  const { setEnabledLevels, startGame, language } = useGameStore();
+  const t = (key: string) => tr(language, key);
+  const isRtl = language === 'he';
 
   const toggle = (level: SpiceLevel) => {
     setSelected((prev) => {
@@ -48,12 +48,17 @@ export default function LevelSelectScreen() {
   return (
     <GradientBackground>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
+        <View style={styles.topRow}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.back}>
+            <Text style={styles.backText}>{t('back')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/settings')} style={styles.settingsBtn}>
+            <Text style={styles.settingsIcon}>⚙️</Text>
+          </TouchableOpacity>
+        </View>
 
-        <Text style={styles.heading}>Choose Your Heat</Text>
-        <Text style={styles.sub}>Mix levels for maximum fun</Text>
+        <Text style={[styles.heading, isRtl && styles.rtl]}>{t('chooseHeat')}</Text>
+        <Text style={[styles.sub, isRtl && styles.rtl]}>{t('mixLevels')}</Text>
 
         {LEVELS.map((opt) => {
           const isOn = selected.includes(opt.level);
@@ -64,14 +69,14 @@ export default function LevelSelectScreen() {
               activeOpacity={0.8}
               style={[styles.card, { backgroundColor: opt.color, borderColor: isOn ? opt.border : opt.border + '30' }]}
             >
-              <View style={styles.cardRow}>
+              <View style={[styles.cardRow, isRtl && styles.rowRtl]}>
                 <Text style={styles.emoji}>{opt.emoji}</Text>
                 <View style={styles.cardText}>
-                  <View style={styles.nameRow}>
-                    <Text style={[styles.levelName, { color: isOn ? Colors.text.primary : Colors.text.muted }]}>{opt.name}</Text>
+                  <View style={[styles.nameRow, isRtl && styles.rowRtl]}>
+                    <Text style={[styles.levelName, { color: isOn ? Colors.text.primary : Colors.text.muted }, isRtl && styles.rtl]}>{t(opt.nameKey)}</Text>
                     {opt.level === 'hardcore' && <Text style={styles.badge18}>18+</Text>}
                   </View>
-                  <Text style={styles.description}>{opt.description}</Text>
+                  <Text style={[styles.description, isRtl && styles.rtl]}>{t(opt.descKey)}</Text>
                 </View>
                 <View style={[styles.check, { borderColor: opt.border, backgroundColor: isOn ? opt.border : 'transparent' }]}>
                   {isOn && <Text style={styles.checkMark}>✓</Text>}
@@ -81,64 +86,7 @@ export default function LevelSelectScreen() {
           );
         })}
 
-        {/* Custom cards section */}
-        <TouchableOpacity style={styles.customHeader} onPress={() => setShowCustom((v) => !v)}>
-          <Text style={styles.customHeaderText}>✏️ Custom Questions {customCards.length > 0 ? `(${customCards.length})` : ''}</Text>
-          <Text style={styles.customChevron}>{showCustom ? '▲' : '▼'}</Text>
-        </TouchableOpacity>
-
-        {showCustom && (
-          <View style={styles.customPanel}>
-            {/* Type toggle */}
-            <View style={styles.typeRow}>
-              {(['truth', 'dare'] as CardType[]).map((t) => (
-                <TouchableOpacity
-                  key={t}
-                  style={[styles.typeBtn, customType === t && styles.typeBtnActive]}
-                  onPress={() => setCustomType(t)}
-                >
-                  <Text style={[styles.typeBtnText, customType === t && styles.typeBtnTextActive]}>
-                    {t === 'truth' ? '🔮 Truth' : '⚡ Dare'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Input */}
-            <TextInput
-              style={styles.input}
-              placeholder={customType === 'truth' ? 'Write your truth question...' : 'Write your dare...'}
-              placeholderTextColor={Colors.text.muted}
-              value={customText}
-              onChangeText={setCustomText}
-              multiline
-              maxLength={200}
-            />
-            <TouchableOpacity
-              style={[styles.addBtn, !customText.trim() && styles.addBtnDisabled]}
-              onPress={() => {
-                if (!customText.trim()) return;
-                addCustomCard(customText.trim(), customType);
-                setCustomText('');
-              }}
-            >
-              <Text style={styles.addBtnText}>+ Add</Text>
-            </TouchableOpacity>
-
-            {/* List */}
-            {customCards.map((c) => (
-              <View key={c.id} style={styles.customCard}>
-                <Text style={styles.customCardBadge}>{c.type === 'truth' ? '🔮' : '⚡'}</Text>
-                <Text style={styles.customCardText} numberOfLines={3}>{c.text}</Text>
-                <TouchableOpacity onPress={() => removeCustomCard(c.id)} style={styles.deleteBtn}>
-                  <Text style={styles.deleteBtnText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-        )}
-
-        <GlowButton label="Let's Play 🔥" onPress={handlePlay} style={styles.cta} fontSize={20} />
+        <GlowButton label={t('letsPlay')} onPress={handlePlay} style={styles.cta} fontSize={20} />
       </ScrollView>
     </GradientBackground>
   );
@@ -150,13 +98,22 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
     gap: 16,
   },
-  back: {
-    alignSelf: 'flex-start',
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
+  back: {},
   backText: {
     color: Colors.text.secondary,
     fontSize: 15,
+  },
+  settingsBtn: {
+    padding: 4,
+  },
+  settingsIcon: {
+    fontSize: 22,
   },
   heading: {
     color: Colors.brand.gold,
@@ -169,6 +126,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginTop: -8,
+  },
+  rtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  rowRtl: {
+    flexDirection: 'row-reverse',
   },
   card: {
     borderRadius: 16,
@@ -225,104 +189,5 @@ const styles = StyleSheet.create({
   },
   cta: {
     marginTop: 8,
-  },
-  customHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  customHeaderText: {
-    color: Colors.brand.gold,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  customChevron: {
-    color: Colors.text.muted,
-    fontSize: 12,
-  },
-  customPanel: {
-    gap: 10,
-    paddingHorizontal: 4,
-  },
-  typeRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  typeBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-  },
-  typeBtnActive: {
-    borderColor: Colors.brand.gold,
-    backgroundColor: 'rgba(244,197,66,0.12)',
-  },
-  typeBtnText: {
-    color: Colors.text.muted,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  typeBtnTextActive: {
-    color: Colors.brand.gold,
-  },
-  input: {
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    color: Colors.text.primary,
-    fontSize: 14,
-    padding: 12,
-    minHeight: 72,
-    textAlignVertical: 'top',
-  },
-  addBtn: {
-    backgroundColor: Colors.brand.purple,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  addBtnDisabled: {
-    opacity: 0.4,
-  },
-  addBtnText: {
-    color: Colors.text.primary,
-    fontWeight: '800',
-    fontSize: 15,
-  },
-  customCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 10,
-    padding: 12,
-  },
-  customCardBadge: {
-    fontSize: 16,
-    marginTop: 1,
-  },
-  customCardText: {
-    flex: 1,
-    color: Colors.text.secondary,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  deleteBtn: {
-    padding: 4,
-  },
-  deleteBtnText: {
-    color: Colors.text.muted,
-    fontSize: 14,
-    fontWeight: '700',
   },
 });

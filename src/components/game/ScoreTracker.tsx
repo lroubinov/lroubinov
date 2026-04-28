@@ -6,11 +6,15 @@ import { Player } from '../../data/types';
 interface Props {
   players: [Player, Player];
   turnNumber: number;
-  totalRounds: number;
+  totalRounds: number | null;
 }
 
 export default function ScoreTracker({ players, turnNumber, totalRounds }: Props) {
   const currentRound = Math.ceil(turnNumber / 2);
+  const roundDisplay = totalRounds === null
+    ? `Round ${currentRound} / ∞`
+    : `Round ${Math.min(currentRound, totalRounds)} / ${totalRounds}`;
+
   return (
     <View style={styles.row}>
       <View style={styles.playerScore}>
@@ -18,7 +22,7 @@ export default function ScoreTracker({ players, turnNumber, totalRounds }: Props
         <Text style={styles.score}>{players[0].score} pts</Text>
       </View>
       <View style={styles.center}>
-        <Text style={styles.round}>Round {Math.min(currentRound, totalRounds)}/{totalRounds}</Text>
+        <Text style={styles.round}>{roundDisplay}</Text>
       </View>
       <View style={[styles.playerScore, styles.right]}>
         <Text style={styles.playerName}>{players[1].name}</Text>

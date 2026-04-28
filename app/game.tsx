@@ -10,10 +10,13 @@ import TruthDareButtons from '../src/components/game/TruthDareButtons';
 import AnimatedCard, { AnimatedCardRef } from '../src/components/ui/AnimatedCard';
 import GradientBackground from '../src/components/ui/GradientBackground';
 import { Colors } from '../src/constants/colors';
+import { tr } from '../src/i18n';
 import { useGameStore } from '../src/store/gameStore';
 
 export default function GameScreen() {
-  const { gameState, selectCardType, onRevealComplete, onTimerComplete, completeTurn, skipTurn } = useGameStore();
+  const { gameState, selectCardType, onRevealComplete, onTimerComplete, completeTurn, skipTurn, endGame, language } = useGameStore();
+  const t = (key: string) => tr(language, key);
+  const isRtl = language === 'he';
   const cardRef = useRef<AnimatedCardRef>(null);
 
   const gs = gameState;
@@ -37,26 +40,27 @@ export default function GameScreen() {
 
   const handleTypeSelect = (type: 'truth' | 'dare') => {
     selectCardType(type);
-    // Flip the card after a brief delay to let state update
     setTimeout(() => cardRef.current?.flip(), 50);
-  };
-
-  const handleRevealComplete = () => {
-    onRevealComplete();
   };
 
   const showCard = gs.phase !== 'choosing';
   const showTimer = gs.phase === 'timer_running';
   const showActions = gs.phase === 'awaiting_done';
+  const isUnlimited = gs.config.totalRounds === null;
 
   return (
     <GradientBackground>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <ScoreTracker
-          players={gs.config.players}
-          turnNumber={gs.turnNumber}
-          totalRounds={gs.config.totalRounds}
-        />
+        <View style={styles.topBar}>
+          <ScoreTracker
+            players={gs.config.players}
+            turnNumber={gs.turnNumber}
+            totalRounds={gs.config.totalRounds}
+          />
+          <TouchableOpacity style={styles.endBtn} onPress={endGame}>
+            <Text style={styles.endBtnText}>{t('endGame')}</Text>
+          </TouchableOpacity>
+        </View>
 
         <PlayerBanner name={currentPlayer.name} />
 
@@ -65,7 +69,7 @@ export default function GameScreen() {
           <AnimatedCard
             ref={cardRef}
             frontContent={gs.currentCard ? <CardReveal card={gs.currentCard} /> : null}
-            onFlipComplete={handleRevealComplete}
+            onFlipComplete={onRevealComplete}
           />
         </View>
 
@@ -74,28 +78,36 @@ export default function GameScreen() {
           <TruthDareButtons onSelect={handleTypeSelect} />
         )}
 
-        {/* Revealing phase — just showing the card flipping */}
+        {/* Revealing phase */}
         {gs.phase === 'revealing' && (
-          <Text style={styles.hint}>Flipping...</Text>
+          <Text style={[styles.hint, isRtl && styles.rtl]}>{t('flipping')}</Text>
         )}
 
         {/* Timer */}
         {showTimer && (
           <>
-            <Text style={styles.dareLabel}>Complete the dare!</Text>
+            <Text style={[styles.dareLabel, isRtl && styles.rtl]}>{t('completeTheDare')}</Text>
             <CountdownTimer
               seconds={gs.currentCard?.timerSeconds ?? 30}
               onComplete={onTimerComplete}
             />
             <TouchableOpacity style={styles.skipTimer} onPress={onTimerComplete}>
-              <Text style={styles.skipTimerText}>Skip Timer ⏭</Text>
+              <Text style={styles.skipTimerText}>{t('skipTimer')}</Text>
             </TouchableOpacity>
           </>
         )}
 
         {/* Action buttons */}
         {showActions && (
-          <ActionButtons onDone={completeTurn} onSkip={skipTurn} />
+          <ActionButtons
+            onDone={completeTurn}
+            onSkip={skipTurn}
+            skipsRemaining={gs.skipsRemaining}
+            doneLabel={t('done')}
+            skipLabel={t('skip')}
+            skipsLeftLabel={t('skipsLeft')}
+            noSkipsLabel={t('noSkipsLeft')}
+          />
         )}
       </ScrollView>
     </GradientBackground>
@@ -108,8 +120,30 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
     minHeight: '100%',
   },
+  topBar: {
+    gap: 8,
+  },
+  endBtn: {
+    alignSelf: 'flex-end',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.brand.crimson + '60',
+    marginTop: 4,
+  },
+  endBtnText: {
+    color: Colors.brand.crimson,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
   cardArea: {
     marginVertical: 8,
+  },
+  rtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   hint: {
     color: Colors.text.muted,

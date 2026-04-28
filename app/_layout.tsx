@@ -10,6 +10,7 @@ export default function RootLayout() {
         <Stack.Screen name="game" options={{ gestureEnabled: false }} />
         <Stack.Screen name="forfeit" options={{ presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }} />
         <Stack.Screen name="results" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="settings" options={{ presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }} />
       </Stack>
     </GestureHandlerRootView>
   );

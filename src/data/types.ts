@@ -10,6 +10,8 @@ export type GamePhase =
   | 'forfeit'
   | 'game_over';
 
+export type GameRounds = 10 | 15 | 20 | null; // null = unlimited
+
 export interface Card {
   id: string;
   type: CardType;
@@ -34,7 +36,7 @@ export interface Player {
 export interface GameConfig {
   players: [Player, Player];
   enabledLevels: SpiceLevel[];
-  totalRounds: number;
+  totalRounds: number | null;
 }
 
 export interface GameState {
@@ -46,4 +48,5 @@ export interface GameState {
   phase: GamePhase;
   turnNumber: number;
   pendingForfeit: ForfeitCard | null;
+  skipsRemaining: number;
 }

@@ -5,10 +5,13 @@ import ForfeitCard from '../src/components/forfeit/ForfeitCard';
 import GlowButton from '../src/components/ui/GlowButton';
 import GradientBackground from '../src/components/ui/GradientBackground';
 import { Colors } from '../src/constants/colors';
+import { tr } from '../src/i18n';
 import { useGameStore } from '../src/store/gameStore';
 
 export default function ForfeitScreen() {
-  const { gameState, completeForfeit } = useGameStore();
+  const { gameState, completeForfeit, language } = useGameStore();
+  const t = (key: string) => tr(language, key);
+  const isRtl = language === 'he';
 
   if (!gameState?.pendingForfeit) {
     router.back();
@@ -25,15 +28,15 @@ export default function ForfeitScreen() {
   return (
     <GradientBackground colors={['#1A0005', '#0A0010', '#0A0010']}>
       <View style={styles.container}>
-        <Text style={styles.header}>Forfeit Time ⚡</Text>
-        <Text style={styles.playerText}>
-          This is your consequence, <Text style={styles.playerName}>{currentPlayer.name}</Text>
+        <Text style={[styles.header, isRtl && styles.rtl]}>{t('forfeitTime')}</Text>
+        <Text style={[styles.playerText, isRtl && styles.rtl]}>
+          {t('consequence')} <Text style={styles.playerName}>{currentPlayer.name}</Text>
         </Text>
 
         <ForfeitCard forfeit={gameState.pendingForfeit} />
 
         <GlowButton
-          label="I Accept 😈"
+          label={t('iAccept')}
           onPress={handleAccept}
           colors={['#7D0020', '#3D0010']}
           style={styles.cta}
@@ -67,6 +70,10 @@ const styles = StyleSheet.create({
   playerName: {
     color: Colors.brand.gold,
     fontWeight: '800',
+  },
+  rtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   cta: {
     width: '100%',

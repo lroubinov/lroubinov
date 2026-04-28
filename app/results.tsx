@@ -4,10 +4,13 @@ import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import GlowButton from '../src/components/ui/GlowButton';
 import GradientBackground from '../src/components/ui/GradientBackground';
 import { Colors } from '../src/constants/colors';
+import { tr } from '../src/i18n';
 import { useGameStore } from '../src/store/gameStore';
 
 export default function ResultsScreen() {
-  const { gameState, resetGame, startGame } = useGameStore();
+  const { gameState, resetGame, startGame, language } = useGameStore();
+  const t = (key: string) => tr(language, key);
+  const isRtl = language === 'he';
 
   const winnerScale = useRef(new Animated.Value(0.5)).current;
   const winnerOpacity = useRef(new Animated.Value(0)).current;
@@ -45,35 +48,36 @@ export default function ResultsScreen() {
   return (
     <GradientBackground>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Game Over 🎉</Text>
+        <Text style={[styles.title, isRtl && styles.rtl]}>{t('gameOver')}</Text>
 
         <Animated.View style={[styles.winnerCard, winnerStyle]}>
           {isDraw ? (
             <>
               <Text style={styles.drawEmoji}>💋</Text>
-              <Text style={styles.drawText}>It's a draw!</Text>
-              <Text style={styles.drawSub}>You both win tonight...</Text>
+              <Text style={[styles.drawText, isRtl && styles.rtl]}>{t('itsADraw')}</Text>
+              <Text style={[styles.drawSub, isRtl && styles.rtl]}>{t('bothWin')}</Text>
             </>
           ) : (
             <>
               <Text style={styles.crownEmoji}>👑</Text>
-              <Text style={styles.winnerLabel}>Winner</Text>
-              <Text style={styles.winnerName}>{winner!.name}</Text>
-              <Text style={styles.winnerScore}>{winner!.score} points</Text>
+              <Text style={[styles.winnerLabel, isRtl && styles.rtl]}>{t('winner')}</Text>
+              <Text style={[styles.winnerName, isRtl && styles.rtl]}>{winner!.name}</Text>
+              <Text style={[styles.winnerScore, isRtl && styles.rtl]}>{winner!.score} {t('pts')}</Text>
             </>
           )}
         </Animated.View>
 
-        {/* Scores */}
         <View style={styles.scoresSection}>
-          <Text style={styles.scoresTitle}>Final Scores</Text>
+          <Text style={[styles.scoresTitle, isRtl && styles.rtl]}>{t('finalScores')}</Text>
           {[p1, p2].map((p) => (
-            <View key={p.id} style={styles.scoreRow}>
+            <View key={p.id} style={[styles.scoreRow, isRtl && styles.rowRtl]}>
               <Text style={styles.scoreName}>{p.name}</Text>
               <View style={styles.scoreRight}>
-                <Text style={styles.scorePoints}>{p.score} pts</Text>
+                <Text style={styles.scorePoints}>{p.score} {t('pts')}</Text>
                 {p.forfeitsOwed > 0 && (
-                  <Text style={styles.forfeits}>{p.forfeitsOwed} forfeit{p.forfeitsOwed > 1 ? 's' : ''}</Text>
+                  <Text style={styles.forfeits}>
+                    {p.forfeitsOwed} {p.forfeitsOwed > 1 ? t('forfeits') : t('forfeit')}
+                  </Text>
                 )}
               </View>
             </View>
@@ -81,9 +85,9 @@ export default function ResultsScreen() {
         </View>
 
         <View style={styles.buttons}>
-          <GlowButton label="Play Again 🔥" onPress={handlePlayAgain} style={styles.btn} fontSize={17} />
+          <GlowButton label={t('playAgain')} onPress={handlePlayAgain} style={styles.btn} fontSize={17} />
           <GlowButton
-            label="New Game"
+            label={t('newGame')}
             onPress={handleNewGame}
             colors={['#1E0035', '#2D0050']}
             style={styles.btn}
@@ -110,6 +114,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textAlign: 'center',
     letterSpacing: 2,
+  },
+  rtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  rowRtl: {
+    flexDirection: 'row-reverse',
   },
   winnerCard: {
     backgroundColor: Colors.bg.surface,
