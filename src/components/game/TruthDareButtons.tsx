@@ -5,6 +5,8 @@ import { Colors } from '../../constants/colors';
 import { CardType } from '../../data/types';
 
 interface Props {
+  truthLabel: string;
+  dareLabel: string;
   onSelect: (type: CardType) => void;
 }
 
@@ -41,11 +43,11 @@ function BigButton({ label, emoji, colors, onPress }: { label: string; emoji: st
   );
 }
 
-export default function TruthDareButtons({ onSelect }: Props) {
+export default function TruthDareButtons({ onSelect, truthLabel, dareLabel }: Props) {
   return (
     <View style={styles.row}>
-      <BigButton label="TRUTH" emoji="💬" colors={Colors.gradient.button.truth} onPress={() => onSelect('truth')} />
-      <BigButton label="DARE" emoji="🔥" colors={Colors.gradient.button.dare} onPress={() => onSelect('dare')} />
+      <BigButton label={truthLabel} emoji="💬" colors={Colors.gradient.button.truth} onPress={() => onSelect('truth')} />
+      <BigButton label={dareLabel} emoji="🔥" colors={Colors.gradient.button.dare} onPress={() => onSelect('dare')} />
     </View>
   );
 }

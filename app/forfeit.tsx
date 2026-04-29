@@ -10,20 +10,14 @@ import { useGameStore } from '../src/store/gameStore';
 
 export default function ForfeitScreen() {
   const { gameState, completeForfeit, language } = useGameStore();
-  const t = (key: string) => tr(language, key);
+  const t = (k: string) => tr(language, k);
   const isRtl = language === 'he';
 
-  if (!gameState?.pendingForfeit) {
-    router.back();
-    return null;
-  }
+  if (!gameState?.pendingForfeit) { router.back(); return null; }
 
   const currentPlayer = gameState.config.players[gameState.currentPlayerIndex];
-
-  const handleAccept = () => {
-    completeForfeit();
-    router.back();
-  };
+  const partnerIndex: 0 | 1 = gameState.currentPlayerIndex === 0 ? 1 : 0;
+  const partnerGender = gameState.config.players[partnerIndex].gender;
 
   return (
     <GradientBackground colors={['#1A0005', '#0A0010', '#0A0010']}>
@@ -32,51 +26,23 @@ export default function ForfeitScreen() {
         <Text style={[styles.playerText, isRtl && styles.rtl]}>
           {t('consequence')} <Text style={styles.playerName}>{currentPlayer.name}</Text>
         </Text>
-
-        <ForfeitCard forfeit={gameState.pendingForfeit} />
-
-        <GlowButton
-          label={t('iAccept')}
-          onPress={handleAccept}
-          colors={['#7D0020', '#3D0010']}
-          style={styles.cta}
-          fontSize={18}
+        <ForfeitCard
+          forfeit={gameState.pendingForfeit}
+          language={language}
+          myGender={currentPlayer.gender}
+          partnerGender={partnerGender}
         />
+        <GlowButton label={t('iAccept')} onPress={() => { completeForfeit(); router.back(); }} colors={['#7D0020', '#3D0010']} style={styles.cta} fontSize={18} />
       </View>
     </GradientBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 28,
-    justifyContent: 'center',
-    gap: 24,
-    alignItems: 'center',
-  },
-  header: {
-    color: Colors.brand.crimson,
-    fontSize: 32,
-    fontWeight: '900',
-    letterSpacing: 2,
-    textAlign: 'center',
-  },
-  playerText: {
-    color: Colors.text.secondary,
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  playerName: {
-    color: Colors.brand.gold,
-    fontWeight: '800',
-  },
-  rtl: {
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  cta: {
-    width: '100%',
-    marginTop: 8,
-  },
+  container: { flex: 1, padding: 28, justifyContent: 'center', gap: 24, alignItems: 'center' },
+  header: { color: Colors.brand.crimson, fontSize: 32, fontWeight: '900', letterSpacing: 2, textAlign: 'center' },
+  playerText: { color: Colors.text.secondary, fontSize: 16, textAlign: 'center' },
+  playerName: { color: Colors.brand.gold, fontWeight: '800' },
+  rtl: { textAlign: 'right', writingDirection: 'rtl' },
+  cta: { width: '100%', marginTop: 8 },
 });
