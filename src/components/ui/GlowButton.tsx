@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef } from 'react';
 import { ActivityIndicator, Animated, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
 import { Colors } from '../../constants/colors';
@@ -27,6 +28,7 @@ export default function GlowButton({ label, onPress, colors = Colors.gradient.go
   }, []);
 
   const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Animated.sequence([
       Animated.timing(scale, { toValue: 0.95, duration: 80, useNativeDriver: true }),
       Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: true }),

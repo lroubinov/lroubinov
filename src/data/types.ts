@@ -29,6 +29,7 @@ export interface ForfeitCard {
 export interface Player {
   id: 1 | 2;
   name: string;
+  gender: 'M' | 'F';
   score: number;
   forfeitsOwed: number;
 }
