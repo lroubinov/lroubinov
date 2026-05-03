@@ -18,19 +18,20 @@ const DURATIONS: { value: GameRounds; en: string; he: string }[] = [
 ];
 
 function parseCsv(text: string) {
-  const lines = text.trim().split('\n').filter(l => l.trim());
+  const lines = text.replace(/\r/g, '').trim().split('\n').filter(l => l.trim());
   const cards: any[] = [];
+  let skipped = 0;
   for (const line of lines) {
     const parts = line.split(',').map(p => p.trim());
-    if (parts.length < 3) return null;
+    if (parts.length < 3) { skipped++; continue; }
     const [rawLevel, rawType, ...rest] = parts;
     const cardText = rest.join(',').trim();
-    if (!['hot','scorching','hardcore'].includes(rawLevel)) return null;
-    if (!['truth','dare'].includes(rawType)) return null;
-    if (!cardText) return null;
+    if (!['hot','scorching','hardcore'].includes(rawLevel)) { skipped++; continue; }
+    if (!['truth','dare'].includes(rawType)) { skipped++; continue; }
+    if (!cardText) { skipped++; continue; }
     cards.push({ id: `csv-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, type: rawType as CardType, level: rawLevel as any, text: cardText });
   }
-  return cards.length > 0 ? cards : null;
+  return cards.length > 0 ? { cards, skipped } : null;
 }
 
 export default function SettingsScreen() {
@@ -46,11 +47,14 @@ export default function SettingsScreen() {
   const [showCsv, setShowCsv] = useState(false);
 
   const doImport = (text: string) => {
-    const cards = parseCsv(text);
-    if (!cards) { setCsvMsg({ text: t('importError'), ok: false }); return; }
-    addCustomCards(cards);
+    const result = parseCsv(text);
+    if (!result) { setCsvMsg({ text: t('importError'), ok: false }); return; }
+    addCustomCards(result.cards);
     setCsvText('');
-    setCsvMsg({ text: `${cards.length} ${t('importSuccess')}`, ok: true });
+    const msg = result.skipped > 0
+      ? `${result.cards.length} ${t('importSuccess')} (${result.skipped} skipped)`
+      : `${result.cards.length} ${t('importSuccess')}`;
+    setCsvMsg({ text: msg, ok: true });
     setTimeout(() => setCsvMsg(null), 3000);
   };
 
