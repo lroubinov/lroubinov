@@ -1,54 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useFonts, BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
-import { Exo2_700Bold } from '@expo-google-fonts/exo-2';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import GradientBackground from '../src/components/ui/GradientBackground';
+import ParticleBackground from '../src/components/ui/ParticleBackground';
 import { Colors } from '../src/constants/colors';
 import { tr } from '../src/i18n';
 import { useGameStore } from '../src/store/gameStore';
-
-// Floating particle
-function Particle({ color, size, left, duration, delay }: { color: string; size: number; left: number; duration: number; delay: number }) {
-  const y = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const anim = Animated.loop(Animated.sequence([
-      Animated.delay(delay),
-      Animated.parallel([
-        Animated.timing(y, { toValue: -700, duration, useNativeDriver: true }),
-        Animated.sequence([
-          Animated.timing(opacity, { toValue: 0.8, duration: duration * 0.1, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 0.6, duration: duration * 0.8, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 0, duration: duration * 0.1, useNativeDriver: true }),
-        ]),
-      ]),
-    ]));
-    anim.start();
-    return () => anim.stop();
-  }, []);
-  return (
-    <Animated.View style={{
-      position: 'absolute', bottom: 0, left: `${left}%` as any,
-      width: size, height: size, borderRadius: size / 2,
-      backgroundColor: color,
-      shadowColor: color, shadowOpacity: 0.9, shadowRadius: size * 2, shadowOffset: { width: 0, height: 0 },
-      transform: [{ translateY: y }], opacity,
-    }} />
-  );
-}
-
-const PARTICLES = [
-  { color: '#FF4E00', size: 3, left: 15, duration: 8000, delay: 0 },
-  { color: '#FF9500', size: 4, left: 30, duration: 10000, delay: 1500 },
-  { color: '#FFD700', size: 2, left: 50, duration: 7000, delay: 3000 },
-  { color: '#FF2D78', size: 3, left: 70, duration: 9000, delay: 800 },
-  { color: '#00D4FF', size: 2, left: 85, duration: 11000, delay: 4000 },
-  { color: '#FF4E00', size: 2, left: 5,  duration: 8500, delay: 2000 },
-  { color: '#FF9500', size: 3, left: 55, duration: 9500, delay: 5000 },
-  { color: '#FF2D78', size: 2, left: 42, duration: 7500, delay: 3500 },
-];
 
 function BlinkDot({ color }: { color: string }) {
   const opacity = useRef(new Animated.Value(1)).current;
@@ -78,7 +36,6 @@ export default function HomeScreen() {
   const { setPlayerNames, setPlayerGenders, language, setLanguage, player1Name: sn1, player2Name: sn2, player1Gender: sg1, player2Gender: sg2 } = useGameStore();
   const t = (k: string) => tr(language, k);
 
-  const [fontsLoaded] = useFonts({ BebasNeue_400Regular, Exo2_700Bold });
   const [name1, setName1] = useState(sn1 || '');
   const [name2, setName2] = useState(sn2 || '');
   const [gender1, setGender1] = useState<'M' | 'F'>(sg1 || 'M');
@@ -122,8 +79,6 @@ export default function HomeScreen() {
     router.push('/level-select');
   };
 
-  if (!fontsLoaded) return null;
-
   return (
     <GradientBackground colors={Colors.gradient.splash}>
       {/* Ambient orbs */}
@@ -131,8 +86,7 @@ export default function HomeScreen() {
       <View style={[s.orb, { width: 200, height: 200, backgroundColor: 'rgba(0,212,255,0.07)', bottom: 80, right: -40 }]} />
       <View style={[s.orb, { width: 160, height: 160, backgroundColor: 'rgba(255,45,120,0.07)', bottom: 140, left: -30 }]} />
 
-      {/* Floating particles */}
-      {PARTICLES.map((p, i) => <Particle key={i} {...p} />)}
+      <ParticleBackground />
 
       <KeyboardAvoidingView style={s.kav} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
