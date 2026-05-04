@@ -34,6 +34,8 @@ const translations: Record<Lang, Record<string, string>> = {
     csvHelp: 'category: hot / scorching / hardcore\ntype: truth / dare',
     importBtn: 'Import', pickCsvFile: '📂  Pick CSV File',
     importSuccess: 'questions imported!', importError: 'Invalid CSV format.',
+    clearAll: 'Delete All', deleteSelected: 'Delete Selected',
+    selectMode: 'Select', cancelSelect: 'Cancel',
   },
   he: {
     tagline: 'הלילה שלכם. החוקים שלכם.',
@@ -68,6 +70,8 @@ const translations: Record<Lang, Record<string, string>> = {
     csvHelp: 'קטגוריה: hot / scorching / hardcore\nסוג: truth / dare',
     importBtn: 'ייבא', pickCsvFile: '📂  בחר קובץ CSV',
     importSuccess: '!שאלות יובאו', importError: 'פורמט CSV לא תקין.',
+    clearAll: 'מחק הכל', deleteSelected: 'מחק נבחרים',
+    selectMode: 'בחר', cancelSelect: 'ביטול',
   },
 };
 

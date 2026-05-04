@@ -27,9 +27,11 @@ interface GameStore extends SetupState {
   setEnabledLevels: (levels: SpiceLevel[]) => void;
   setGameRounds: (rounds: GameRounds) => void;
   setLanguage: (lang: Lang) => void;
-  addCustomCard: (text: string, type: CardType) => void;
+  addCustomCard: (text: string, type: CardType, lang: Lang) => void;
   removeCustomCard: (id: string) => void;
+  removeCustomCards: (ids: string[]) => void;
   addCustomCards: (cards: Card[]) => void;
+  clearCustomCards: () => void;
   startGame: () => void;
   selectCardType: (type: CardType) => void;
   onRevealComplete: () => void;
@@ -59,7 +61,9 @@ function drawCard(deck: Card[], discardPile: Card[], levels: SpiceLevel[], type:
       discardPile = [];
     }
   }
-  const card = available[0];
+  // Pick a random card from available (extra randomness on top of pre-shuffled deck)
+  const idx = Math.floor(Math.random() * available.length);
+  const card = available[idx];
   return { card, deck: deck.filter((c) => c.id !== card.id), discardPile: [...discardPile, card] };
 }
 
@@ -80,17 +84,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setGameRounds: (rounds) => set({ gameRounds: rounds }),
   setLanguage: (lang) => set({ language: lang }),
 
-  addCustomCard: (text, type) => {
+  addCustomCard: (text, type, lang) => {
     const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    set((s) => ({ customCards: [...s.customCards, { id, type, level: 'hot', text }] }));
+    set((s) => ({ customCards: [...s.customCards, { id, type, level: 'hot', text, lang }] }));
   },
   removeCustomCard: (id) => set((s) => ({ customCards: s.customCards.filter((c) => c.id !== id) })),
+  removeCustomCards: (ids) => set((s) => ({ customCards: s.customCards.filter((c) => !ids.includes(c.id)) })),
   addCustomCards: (cards) => set((s) => ({ customCards: [...s.customCards, ...cards] })),
+  clearCustomCards: () => set({ customCards: [] }),
 
   startGame: () => {
-    const { player1Name, player2Name, player1Gender, player2Gender, enabledLevels, customCards, gameRounds } = get();
-    const filteredCustom = customCards.filter((c) => enabledLevels.includes(c.level));
-    const deck = [...buildDeck(enabledLevels, truths, dares), ...shuffleArray(filteredCustom)];
+    const { player1Name, player2Name, player1Gender, player2Gender, enabledLevels, customCards, gameRounds, language } = get();
+    const filteredCustom = customCards.filter(
+      (c) => enabledLevels.includes(c.level) && (!c.lang || c.lang === language)
+    );
+    // Shuffle built-in + custom together for true randomness
+    const deck = shuffleArray([...buildDeck(enabledLevels, truths, dares), ...filteredCustom]);
     const config: GameConfig = {
       players: [makePlayer(1, player1Name, player1Gender), makePlayer(2, player2Name, player2Gender)],
       enabledLevels, totalRounds: gameRounds,

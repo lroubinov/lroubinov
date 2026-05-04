@@ -1,3 +1,5 @@
+import { Lang } from '../i18n';
+
 export type SpiceLevel = 'hot' | 'scorching' | 'hardcore';
 
 export type CardType = 'truth' | 'dare';
@@ -10,13 +12,14 @@ export type GamePhase =
   | 'forfeit'
   | 'game_over';
 
-export type GameRounds = 10 | 15 | 20 | null; // null = unlimited
+export type GameRounds = number | null; // null = unlimited
 
 export interface Card {
   id: string;
   type: CardType;
   level: SpiceLevel;
   text: string;
+  lang?: Lang; // undefined = built-in (any language), set = language-specific custom card
   timerSeconds?: number;
 }
 
