@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import { File } from 'expo-file-system';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import GlowButton from '../src/components/ui/GlowButton';
@@ -63,7 +63,7 @@ export default function SettingsScreen() {
       const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
       if (result.canceled) return;
       const uri = result.assets[0].uri;
-      const content = await FileSystem.readAsStringAsync(uri, { encoding: 'utf8' });
+      const content = await new File(uri).text();
       if (!content || content.trim().length === 0) {
         setCsvMsg({ text: 'File is empty', ok: false });
         return;
