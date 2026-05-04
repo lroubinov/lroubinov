@@ -18,6 +18,14 @@ allprojects {
     mavenCentral()
     maven { url 'https://www.jitpack.io' }
   }
+  configurations.all {
+    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+      if (details.requested.group == 'commons-io' && details.requested.name == 'commons-io') {
+        details.useVersion '2.11.0'
+        details.because 'commons-io 2.6 was removed from Maven Central'
+      }
+    }
+  }
 }
 
 apply plugin: "expo-root-project"
