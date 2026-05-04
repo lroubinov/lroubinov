@@ -60,12 +60,17 @@ export default function SettingsScreen() {
 
   const pickFile = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({ type: ['text/csv','text/plain','text/comma-separated-values'], copyToCacheDirectory: true });
+      const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
       if (result.canceled) return;
-      const content = await FileSystem.readAsStringAsync(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      const content = await FileSystem.readAsStringAsync(uri, { encoding: 'utf8' });
+      if (!content || content.trim().length === 0) {
+        setCsvMsg({ text: 'File is empty', ok: false });
+        return;
+      }
       doImport(content);
-    } catch {
-      setCsvMsg({ text: t('importError'), ok: false });
+    } catch (e: any) {
+      setCsvMsg({ text: `Error: ${e?.message ?? 'unknown'}`, ok: false });
     }
   };
 
