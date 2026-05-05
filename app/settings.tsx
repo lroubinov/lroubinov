@@ -37,7 +37,7 @@ function parseCsv(text: string, lang: Lang) {
 function RoundSpinner({ value, onChange, unlimitedLabel }: { value: number | null; onChange: (v: number | null) => void; unlimitedLabel: string }) {
   const dec = () => {
     if (value === null) onChange(10);
-    else if (value <= 1) onChange(null);
+    else if (value <= 1) onChange(1);
     else onChange(value - 1);
   };
   const inc = () => {
@@ -46,28 +46,45 @@ function RoundSpinner({ value, onChange, unlimitedLabel }: { value: number | nul
     else onChange(value + 1);
   };
   return (
-    <View style={sp.row}>
-      <TouchableOpacity style={sp.btn} onPress={dec}>
-        <Text style={sp.btnText}>−</Text>
-      </TouchableOpacity>
-      <View style={sp.display}>
-        <Text style={sp.value}>{value === null ? '∞' : value}</Text>
-        <Text style={sp.label}>{value === null ? unlimitedLabel : value === 1 ? 'question' : 'questions'}</Text>
+    <View style={sp.wrap}>
+      <View style={sp.row}>
+        <TouchableOpacity style={sp.btn} onPress={dec} disabled={value !== null && value <= 1}>
+          <Text style={[sp.btnText, value !== null && value <= 1 && sp.btnDisabled]}>−</Text>
+        </TouchableOpacity>
+        <View style={sp.display}>
+          <Text style={sp.value}>{value === null ? '∞' : value}</Text>
+          <Text style={sp.label}>{value === null ? unlimitedLabel : value === 1 ? 'question' : 'questions'}</Text>
+        </View>
+        <TouchableOpacity style={sp.btn} onPress={inc} disabled={value !== null && value >= 99}>
+          <Text style={[sp.btnText, value !== null && value >= 99 && sp.btnDisabled]}>+</Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity style={sp.btn} onPress={inc}>
-        <Text style={sp.btnText}>+</Text>
+      {/* Infinity shortcut pill */}
+      <TouchableOpacity
+        style={[sp.infBtn, value === null && sp.infBtnActive]}
+        onPress={() => onChange(null)}
+      >
+        <Text style={[sp.infBtnText, value === null && sp.infBtnTextActive]}>
+          ∞  {unlimitedLabel}
+        </Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 const sp = StyleSheet.create({
+  wrap: { gap: 12 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16 },
   btn: { width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, borderColor: Colors.brand.purpleLight + '80', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(123,47,190,0.15)' },
   btnText: { color: Colors.brand.purpleLight, fontSize: 24, fontWeight: '300', lineHeight: 28 },
+  btnDisabled: { opacity: 0.3 },
   display: { alignItems: 'center', minWidth: 100 },
   value: { color: Colors.brand.gold, fontSize: 40, fontWeight: '900', lineHeight: 44 },
   label: { color: Colors.text.muted, fontSize: 11, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
+  infBtn: { alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 24, borderRadius: 20, borderWidth: 1.5, borderColor: Colors.brand.purpleLight + '50', backgroundColor: 'rgba(123,47,190,0.08)' },
+  infBtnActive: { borderColor: Colors.brand.gold, backgroundColor: 'rgba(255,213,96,0.12)' },
+  infBtnText: { color: Colors.text.muted, fontSize: 14, fontWeight: '700', letterSpacing: 1 },
+  infBtnTextActive: { color: Colors.brand.gold },
 });
 
 export default function SettingsScreen() {
@@ -129,8 +146,8 @@ export default function SettingsScreen() {
     }
   };
 
-  // Cards visible for current language
-  const visibleCards = customCards.filter(c => !c.lang || c.lang === language);
+  // Cards visible for current language only
+  const visibleCards = customCards.filter(c => c.lang === language);
   const otherLangCount = customCards.length - visibleCards.length;
 
   return (

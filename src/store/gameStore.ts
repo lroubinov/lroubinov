@@ -96,7 +96,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   startGame: () => {
     const { player1Name, player2Name, player1Gender, player2Gender, enabledLevels, customCards, gameRounds, language } = get();
     const filteredCustom = customCards.filter(
-      (c) => enabledLevels.includes(c.level) && (!c.lang || c.lang === language)
+      (c) => enabledLevels.includes(c.level) && c.lang === language
     );
     // Shuffle built-in + custom together for true randomness
     const deck = shuffleArray([...buildDeck(enabledLevels, truths, dares), ...filteredCustom]);

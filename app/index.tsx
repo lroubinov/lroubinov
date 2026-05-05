@@ -6,6 +6,7 @@ import GradientBackground from '../src/components/ui/GradientBackground';
 import ParticleBackground from '../src/components/ui/ParticleBackground';
 import { Colors } from '../src/constants/colors';
 import { tr } from '../src/i18n';
+import { Sounds } from '../src/utils/sounds';
 import { useGameStore } from '../src/store/gameStore';
 
 function BlinkDot({ color }: { color: string }) {
@@ -74,6 +75,7 @@ export default function HomeScreen() {
   const valid = name1.trim().length > 0 && name2.trim().length > 0;
 
   const handleStart = () => {
+    Sounds.playClick();
     setPlayerNames(name1.trim(), name2.trim());
     setPlayerGenders(gender1, gender2);
     router.push('/level-select');

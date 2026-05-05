@@ -5,6 +5,7 @@ import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '
 import GradientBackground from '../src/components/ui/GradientBackground';
 import ParticleBackground from '../src/components/ui/ParticleBackground';
 import { Colors } from '../src/constants/colors';
+import { Sounds } from '../src/utils/sounds';
 import { SpiceLevel } from '../src/data/types';
 import { tr } from '../src/i18n';
 import { useGameStore } from '../src/store/gameStore';
@@ -49,6 +50,7 @@ function FireButton({ label, onPress }: { label: string; onPress: () => void }) 
   }, []);
 
   const handlePress = () => {
+    Sounds.playClick();
     Animated.sequence([
       Animated.timing(scale, { toValue: 0.97, duration: 80, useNativeDriver: true }),
       Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: true }),
