@@ -34,7 +34,7 @@ function GenderToggle({ value, onChange, maleLabel, femaleLabel }: { value: 'M' 
 }
 
 export default function HomeScreen() {
-  const { setPlayerNames, setPlayerGenders, language, setLanguage, player1Name: sn1, player2Name: sn2, player1Gender: sg1, player2Gender: sg2 } = useGameStore();
+  const { setPlayerNames, setPlayerGenders, language, setLanguage, player1Name: sn1, player2Name: sn2, player1Gender: sg1, player2Gender: sg2, gameState, resetGame } = useGameStore();
   const t = (k: string) => tr(language, k);
 
   const [name1, setName1] = useState(sn1 || '');
@@ -161,6 +161,27 @@ export default function HomeScreen() {
           <GenderToggle value={gender2} onChange={setGender2} maleLabel={t('male')} femaleLabel={t('female')} />
         </View>
 
+        {/* Resume game banner */}
+        {gameState && gameState.phase !== 'game_over' && (
+          <View style={s.resumeBanner}>
+            <View style={s.resumeInfo}>
+              <Text style={[s.resumeTitle, { fontFamily: 'Exo2_700Bold' }]}>{t('resumePrompt')}</Text>
+              <Text style={s.resumeSub}>
+                {gameState.config.players[0].name} vs {gameState.config.players[1].name}
+                {'  ·  '}{gameState.config.players[0].score} – {gameState.config.players[1].score}
+              </Text>
+            </View>
+            <View style={s.resumeActions}>
+              <TouchableOpacity style={s.resumeBtn} onPress={() => { Sounds.playClick(); router.replace('/game'); }}>
+                <Text style={[s.resumeBtnText, { fontFamily: 'Exo2_700Bold' }]}>{t('continueGame')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { resetGame(); }}>
+                <Text style={s.abandonText}>{t('abandonGame')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Start */}
         <TouchableOpacity onPress={handleStart} disabled={!valid} style={[s.startWrap, !valid && { opacity: 0.4 }]} activeOpacity={0.85}>
           <LinearGradient colors={['#FF8C00', '#FF4E00', '#E63000']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.startBtn}>
@@ -213,6 +234,14 @@ const s = StyleSheet.create({
   vsBadge: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   vsBadgeText: { fontSize: 17, color: '#fff', letterSpacing: 2 },
 
+  resumeBanner: { borderRadius: 16, borderWidth: 1.5, borderColor: Colors.brand.neonBlue + '60', backgroundColor: 'rgba(61,214,245,0.07)', padding: 14, gap: 10 },
+  resumeInfo: { gap: 2 },
+  resumeTitle: { color: Colors.brand.neonBlue, fontSize: 13, letterSpacing: 1 },
+  resumeSub: { color: Colors.text.muted, fontSize: 12 },
+  resumeActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  resumeBtn: { backgroundColor: Colors.brand.neonBlue + '25', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 18, borderWidth: 1, borderColor: Colors.brand.neonBlue + '60' },
+  resumeBtnText: { color: Colors.brand.neonBlue, fontSize: 13 },
+  abandonText: { color: Colors.text.muted, fontSize: 12, textDecorationLine: 'underline' },
   startWrap: { borderRadius: 18, overflow: 'hidden', marginTop: 4 },
   startBtn: { paddingVertical: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 18, overflow: 'hidden' },
   shimmer: { position: 'absolute', top: 0, bottom: 0, width: 70, backgroundColor: 'rgba(255,255,255,0.18)' },

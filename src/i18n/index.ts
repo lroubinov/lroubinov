@@ -36,6 +36,25 @@ const translations: Record<Lang, Record<string, string>> = {
     importSuccess: 'questions imported!', importError: 'Invalid CSV format.',
     clearAll: 'Delete All', deleteSelected: 'Delete Selected',
     selectMode: 'Select', cancelSelect: 'Cancel',
+    // Timer
+    timerLabel: 'Timer', timerNone: 'None',
+    // Packs
+    packsSection: 'Question Packs',
+    packNamePlaceholder: 'Pack name...',
+    createPack: '+ Create Pack',
+    packToggleOn: 'Active', packToggleOff: 'Off',
+    packQuestions: 'questions', noPacks: 'No packs yet',
+    assignPack: 'Pack (optional)',
+    noPack: 'No pack',
+    // Resume game
+    resumeGame: 'Resume Game',
+    resumePrompt: 'You have an unfinished game',
+    continueGame: 'Continue →',
+    abandonGame: 'Abandon',
+    // History
+    historyTitle: 'Round History',
+    historyDone: 'Done', historySkipped: 'Skipped', historyForfeit: 'Forfeit',
+    noHistory: 'No rounds played yet',
   },
   he: {
     tagline: 'הלילה שלכם. החוקים שלכם.',
@@ -72,6 +91,25 @@ const translations: Record<Lang, Record<string, string>> = {
     importSuccess: '!שאלות יובאו', importError: 'פורמט CSV לא תקין.',
     clearAll: 'מחק הכל', deleteSelected: 'מחק נבחרים',
     selectMode: 'בחר', cancelSelect: 'ביטול',
+    // Timer
+    timerLabel: 'טיימר', timerNone: 'ללא',
+    // Packs
+    packsSection: 'חבילות שאלות',
+    packNamePlaceholder: 'שם החבילה...',
+    createPack: '+ צור חבילה',
+    packToggleOn: 'פעיל', packToggleOff: 'כבוי',
+    packQuestions: 'שאלות', noPacks: 'אין חבילות עדיין',
+    assignPack: 'חבילה (אופציונלי)',
+    noPack: 'ללא חבילה',
+    // Resume game
+    resumeGame: 'המשך משחק',
+    resumePrompt: 'יש לך משחק לא גמור',
+    continueGame: 'המשך →',
+    abandonGame: 'נטוש',
+    // History
+    historyTitle: 'היסטוריית סיבובים',
+    historyDone: 'הושלם', historySkipped: 'דולג', historyForfeit: 'עונש',
+    noHistory: 'לא שוחקו סיבובים עדיין',
   },
 };
 
