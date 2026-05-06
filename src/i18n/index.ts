@@ -38,6 +38,8 @@ const translations: Record<Lang, Record<string, string>> = {
     selectMode: 'Select', cancelSelect: 'Cancel',
     // Timer
     timerLabel: 'Timer', timerNone: 'None',
+    timerAdd: '+15s', timerSub: '−15s',
+    loadDefaultPrizes: '📥 Load built-in prizes',
     // Packs
     packsSection: 'Question Packs',
     packNamePlaceholder: 'Pack name...',
@@ -109,6 +111,8 @@ const translations: Record<Lang, Record<string, string>> = {
     selectMode: 'בחר', cancelSelect: 'ביטול',
     // Timer
     timerLabel: 'טיימר', timerNone: 'ללא',
+    timerAdd: '+15s', timerSub: '−15s',
+    loadDefaultPrizes: '📥 טען פרסים מובנים',
     // Packs
     packsSection: 'חבילות שאלות',
     packNamePlaceholder: 'שם החבילה...',

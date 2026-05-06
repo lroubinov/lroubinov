@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
+import { Sounds } from '../../utils/sounds';
 
 const RADIUS = 130;
 const CX = RADIUS + 10;
@@ -9,16 +10,8 @@ const CY = RADIUS + 10;
 const SIZE = (RADIUS + 10) * 2;
 
 const SEGMENT_COLORS = [
-  ['#E84040', '#C02020'],
-  ['#FF8500', '#C05A00'],
-  ['#7B2FBE', '#4E0F99'],
-  ['#E040A0', '#A01060'],
-  ['#2FBEC8', '#0A7880'],
-  ['#F4C542', '#B88A00'],
-  ['#3ECF4C', '#1A8028'],
-  ['#FF6B35', '#C03000'],
-  ['#8B5CF6', '#5B21B6'],
-  ['#EC4899', '#9D174D'],
+  '#E84040', '#FF8500', '#7B2FBE', '#E040A0', '#2FBEC8',
+  '#F4C542', '#3ECF4C', '#FF6B35', '#8B5CF6', '#EC4899',
 ];
 
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
@@ -50,13 +43,12 @@ export default function PrizeWheel({ prizes, spinLabel, onComplete }: Props) {
     if (spinning || n === 0) return;
     setSpinning(true);
     const winnerIdx = Math.floor(Math.random() * n);
-    // Angle of winning segment center from 0 (top)
     const segCenter = winnerIdx * segAngle + segAngle / 2;
-    // We need the wheel to rotate so segCenter lands at the top (0deg pointer)
-    // The segment at position idx starts at idx * segAngle and the pointer is at the top
     const offset = 360 - segCenter;
-    const spins = 5 * 360;
+    const spins  = 5 * 360;
     const target = totalRot + spins + offset - ((totalRot + offset) % 360);
+
+    Sounds.playWheelSpin();
 
     Animated.timing(rotation, {
       toValue: target,
@@ -64,6 +56,8 @@ export default function PrizeWheel({ prizes, spinLabel, onComplete }: Props) {
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start(() => {
+      Sounds.stopWheelSpin();
+      Sounds.playDing();
       setSpinning(false);
       setTotalRot(target % 360);
       onComplete(prizes[winnerIdx]);
@@ -92,7 +86,7 @@ export default function PrizeWheel({ prizes, spinLabel, onComplete }: Props) {
             const startAngle = i * segAngle;
             const endAngle   = startAngle + segAngle;
             const midAngle   = startAngle + segAngle / 2;
-            const color = SEGMENT_COLORS[i % SEGMENT_COLORS.length][0];
+            const color = SEGMENT_COLORS[i % SEGMENT_COLORS.length];
             const textR = RADIUS * 0.62;
             const tp = polarToCartesian(CX, CY, textR, midAngle);
             const truncated = prize.length > 14 ? prize.slice(0, 13) + '…' : prize;
@@ -121,7 +115,7 @@ export default function PrizeWheel({ prizes, spinLabel, onComplete }: Props) {
               </G>
             );
           })}
-          {/* Center circle */}
+          {/* Center hub */}
           <Path
             d={`M ${CX} ${CY} m -18 0 a 18 18 0 1 0 36 0 a 18 18 0 1 0 -36 0`}
             fill="#1A0020"

@@ -82,4 +82,34 @@ notes.forEach((freq, ni) => {
 });
 fs.writeFileSync(path.join(out, 'ding.wav'), makeWav(dingSamples, SR));
 
-console.log('Generated: click.wav, done.wav, dare.wav, ding.wav in assets/sounds/');
+// spin.wav — wheel ratchet: fast ticks decelerating (matches Easing.out(cubic))
+// 3.8s total matching wheel animation duration
+const SPIN_SR = 22050;
+const SPIN_DUR_S = 3.8;
+const spinN = Math.floor(SPIN_SR * SPIN_DUR_S);
+const spinSamples = new Int16Array(spinN);
+// Tick times: velocity v(t) = (1-t/T)^2, integrate to get position, invert for tick times
+// Tick density: starts at ~20/s, decelerates to ~0.5/s
+const MAX_TICKS_PER_SEC = 22;
+const MIN_TICKS_PER_SEC = 0.8;
+const tickTimes = [];
+let t = 0;
+while (t < SPIN_DUR_S) {
+  const frac = t / SPIN_DUR_S;
+  const vel = (1 - frac) * (1 - frac); // cubic-out deceleration 0..1
+  const ticksPerSec = MIN_TICKS_PER_SEC + (MAX_TICKS_PER_SEC - MIN_TICKS_PER_SEC) * vel;
+  const interval = 1 / ticksPerSec;
+  t += interval;
+  if (t < SPIN_DUR_S) tickTimes.push(t);
+}
+const tickN = Math.floor(SPIN_SR * 0.018); // 18ms tick
+for (const tt of tickTimes) {
+  const start = Math.floor(tt * SPIN_SR);
+  for (let i = 0; i < tickN && start + i < spinN; i++) {
+    const env = Math.exp(-i / (SPIN_SR * 0.008));
+    spinSamples[start + i] = Math.round(0.45 * env * 32767 * Math.sin(2 * Math.PI * 1200 * (i / SPIN_SR)));
+  }
+}
+fs.writeFileSync(path.join(out, 'spin.wav'), makeWav(spinSamples, SPIN_SR));
+
+console.log('Generated: click.wav, done.wav, dare.wav, ding.wav, spin.wav in assets/sounds/');

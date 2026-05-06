@@ -201,7 +201,7 @@ export default function HomeScreen() {
 
 const s = StyleSheet.create({
   kav: { flex: 1 },
-  scroll: { paddingHorizontal: 24, paddingTop: 52, paddingBottom: 32, gap: 10 },
+  scroll: { paddingHorizontal: 20, paddingTop: 28, paddingBottom: 20, gap: 8 },
   orb: { position: 'absolute', borderRadius: 999 },
 
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -212,22 +212,22 @@ const s = StyleSheet.create({
   settingsBtn: { width: 40, height: 40, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   settingsIcon: { fontSize: 18 },
 
-  logoArea: { alignItems: 'center', marginTop: 4 },
-  flame: { fontSize: 48, lineHeight: 56 },
-  logoText: { fontSize: 66, letterSpacing: 8, color: '#FF8C00', lineHeight: 70 },
-  tagline: { fontSize: 10, letterSpacing: 3, textTransform: 'uppercase', color: Colors.text.muted, marginTop: 2 },
-  divider: { height: 1, width: '100%', marginVertical: 4 },
+  logoArea: { alignItems: 'center', marginTop: 0 },
+  flame: { fontSize: 36, lineHeight: 42 },
+  logoText: { fontSize: 54, letterSpacing: 7, color: '#FF8C00', lineHeight: 58 },
+  tagline: { fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: Colors.text.muted, marginTop: 1 },
+  divider: { height: 1, width: '100%', marginVertical: 2 },
 
-  playerCard: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', padding: 16, gap: 10 },
+  playerCard: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', padding: 12, gap: 8 },
   playerCard1: { borderLeftWidth: 3, borderLeftColor: Colors.brand.neonBlue },
   playerCard2: { borderLeftWidth: 3, borderLeftColor: Colors.brand.neonPink },
   playerLabel: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   playerLabelText: { fontSize: 10, letterSpacing: 3, textTransform: 'uppercase' },
   dot: { width: 7, height: 7, borderRadius: 4, shadowOpacity: 0.9, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } },
-  nameInput: { backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', paddingVertical: 12, paddingHorizontal: 16, color: Colors.text.primary, fontSize: 16, letterSpacing: 1 },
+  nameInput: { backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', paddingVertical: 10, paddingHorizontal: 14, color: Colors.text.primary, fontSize: 15, letterSpacing: 1 },
 
   genderRow: { flexDirection: 'row', gap: 8 },
-  genderBtn: { flex: 1, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  genderBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   genderBtnMaleActive: { borderColor: Colors.brand.neonBlue, backgroundColor: 'rgba(0,212,255,0.12)' },
   genderBtnFemaleActive: { borderColor: Colors.brand.neonPink, backgroundColor: 'rgba(255,45,120,0.12)' },
   genderBtnText: { color: Colors.text.muted, fontWeight: '700', fontSize: 13, letterSpacing: 1 },
@@ -245,8 +245,8 @@ const s = StyleSheet.create({
   resumeBtn: { backgroundColor: Colors.brand.neonBlue + '25', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 18, borderWidth: 1, borderColor: Colors.brand.neonBlue + '60' },
   resumeBtnText: { color: Colors.brand.neonBlue, fontSize: 13 },
   abandonText: { color: Colors.text.muted, fontSize: 12, textDecorationLine: 'underline' },
-  startWrap: { borderRadius: 18, overflow: 'hidden', marginTop: 4 },
-  startBtn: { paddingVertical: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 18, overflow: 'hidden' },
+  startWrap: { borderRadius: 16, overflow: 'hidden', marginTop: 2 },
+  startBtn: { paddingVertical: 14, alignItems: 'center', justifyContent: 'center', borderRadius: 16, overflow: 'hidden' },
   shimmer: { position: 'absolute', top: 0, bottom: 0, width: 70, backgroundColor: 'rgba(255,255,255,0.18)' },
   startBtnText: { fontSize: 28, letterSpacing: 5, color: '#fff' },
 

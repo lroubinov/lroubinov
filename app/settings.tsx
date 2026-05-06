@@ -7,6 +7,7 @@ import GlowButton from '../src/components/ui/GlowButton';
 import GradientBackground from '../src/components/ui/GradientBackground';
 import { Colors } from '../src/constants/colors';
 import { CardType, Prize } from '../src/data/types';
+import { defaultPrizes } from '../src/data/prizes';
 import { Lang, tr } from '../src/i18n';
 import { useGameStore } from '../src/store/gameStore';
 
@@ -553,6 +554,19 @@ export default function SettingsScreen() {
             {prizeCsvMsg && <Text style={[styles.csvMsg, prizeCsvMsg.ok ? styles.csvMsgOk : styles.csvMsgErr]}>{prizeCsvMsg.text}</Text>}
             <GlowButton label={t('importPrizes')} onPress={() => doImportPrizes(prizeCsvText)} colors={['#1a3a00','#3D7000']} fontSize={15} />
 
+            {/* Load built-in prizes button — only when no custom prizes yet */}
+            {visiblePrizes.length === 0 && (
+              <TouchableOpacity
+                style={styles.loadDefaultsBtn}
+                onPress={() => {
+                  const defaults = defaultPrizes.filter(p => p.lang === language);
+                  addPrizes(defaults);
+                }}
+              >
+                <Text style={styles.loadDefaultsText}>{t('loadDefaultPrizes')}</Text>
+              </TouchableOpacity>
+            )}
+
             {/* Prize list */}
             {visiblePrizes.length === 0 && (
               <Text style={styles.emptyNote}>{t('noPrizes')}</Text>
@@ -663,4 +677,6 @@ const styles = StyleSheet.create({
   prizeGroupLabel: { color: Colors.text.muted, fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 8 },
   prizeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 10 },
   prizeText: { flex: 1, color: Colors.text.secondary, fontSize: 13, lineHeight: 18 },
+  loadDefaultsBtn: { paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.brand.gold + '60', alignItems: 'center', backgroundColor: 'rgba(244,197,66,0.08)' },
+  loadDefaultsText: { color: Colors.brand.gold, fontSize: 14, fontWeight: '700', letterSpacing: 0.5 },
 });

@@ -1,5 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ActionButtons from '../src/components/game/ActionButtons';
@@ -19,7 +20,7 @@ interface TODCardProps {
   label: string;
   emoji: string;
   onPress: () => void;
-  exitAnim: Animated.Value; // shared exit animation value
+  exitAnim: Animated.Value;
 }
 
 function TODCard({ type, label, emoji, onPress, exitAnim }: TODCardProps) {
@@ -74,9 +75,19 @@ export default function GameScreen() {
   const cardRef = useRef<AnimatedCardRef>(null);
   const gs = gameState;
 
-  // Exit animation for TOD cards (shared between both)
-  const todExit = useRef(new Animated.Value(1)).current;
+  // Exit animation for TOD cards
+  const todExit  = useRef(new Animated.Value(1)).current;
   const [isExiting, setIsExiting] = useState(false);
+
+  // Timer adjustment: tracked per card, reset each turn
+  const [timerBonus, setTimerBonus]  = useState(0);
+  const [timerKey, setTimerKey]      = useState(0);
+
+  // Keep screen awake during gameplay
+  useEffect(() => {
+    activateKeepAwakeAsync('game');
+    return () => { deactivateKeepAwake('game'); };
+  }, []);
 
   useEffect(() => {
     if (!gs) { router.replace('/'); return; }
@@ -84,9 +95,10 @@ export default function GameScreen() {
     if (gs.phase === 'forfeit')   router.push('/forfeit');
     if (gs.phase === 'choosing') {
       cardRef.current?.reset();
-      // Reset exit animation for new turn
       todExit.setValue(1);
       setIsExiting(false);
+      setTimerBonus(0);
+      setTimerKey(k => k + 1);
     }
   }, [gs?.phase]);
 
@@ -104,12 +116,7 @@ export default function GameScreen() {
   const handleTypeSelect = (type: 'truth' | 'dare') => {
     if (isExiting) return;
     setIsExiting(true);
-    // Animate TOD cards out
-    Animated.timing(todExit, {
-      toValue: 0,
-      duration: 160,
-      useNativeDriver: true,
-    }).start(() => {
+    Animated.timing(todExit, { toValue: 0, duration: 160, useNativeDriver: true }).start(() => {
       selectCardType(type);
       setTimeout(() => cardRef.current?.flip(), 30);
     });
@@ -118,6 +125,15 @@ export default function GameScreen() {
   const handleTimerComplete = () => {
     Sounds.playDing();
     onTimerComplete();
+  };
+
+  const baseTimerSeconds = gs.currentCard?.timerSeconds ?? 30;
+  const effectiveTimer   = Math.max(5, baseTimerSeconds + timerBonus);
+
+  const adjustTimer = (delta: number) => {
+    const next = Math.max(5, effectiveTimer + delta);
+    setTimerBonus(next - baseTimerSeconds);
+    setTimerKey(k => k + 1); // remount CountdownTimer with new duration
   };
 
   const isChoosing = gs.phase === 'choosing';
@@ -132,7 +148,6 @@ export default function GameScreen() {
 
           {/* ── HUD ── */}
           <View style={s.hud}>
-            {/* Player 1 */}
             <View style={s.hudPlayer}>
               <Text style={[s.hudName, { color: Colors.brand.neonBlue }, gs.currentPlayerIndex === 0 && s.hudNameActive]} numberOfLines={1}>
                 {gs.config.players[0].name}
@@ -143,7 +158,6 @@ export default function GameScreen() {
               <Text style={s.hudSkips}>{'⚡'.repeat(Math.max(0, p1Skips))}{p1Skips === 0 ? '—' : ''}</Text>
             </View>
 
-            {/* Center: round + end */}
             <View style={s.hudCenter}>
               <Text style={s.hudRoundLabel}>{t('round').toUpperCase()}</Text>
               <Text style={s.hudRound}>{roundDisplay}</Text>
@@ -152,7 +166,6 @@ export default function GameScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Player 2 */}
             <View style={[s.hudPlayer, s.hudRight]}>
               <Text style={[s.hudName, { color: Colors.brand.neonPink }, gs.currentPlayerIndex === 1 && s.hudNameActive]} numberOfLines={1}>
                 {gs.config.players[1].name}
@@ -190,7 +203,7 @@ export default function GameScreen() {
           {/* ── Main content ── */}
           <View style={s.main}>
 
-            {/* AnimatedCard — always mounted; invisible during choosing */}
+            {/* AnimatedCard */}
             <View style={{ display: isChoosing ? 'none' : 'flex', flex: isChoosing ? 0 : 1 }}>
               <AnimatedCard
                 ref={cardRef}
@@ -216,10 +229,31 @@ export default function GameScreen() {
               </View>
             )}
 
-            {/* Timer */}
+            {/* Timer with adjustment buttons */}
             {gs.phase === 'timer_running' && (
               <View style={s.timerBlock}>
-                <CountdownTimer seconds={gs.currentCard?.timerSeconds ?? 30} onComplete={handleTimerComplete} />
+                <View style={s.timerRow}>
+                  <TouchableOpacity
+                    style={s.timerAdj}
+                    onPress={() => { Sounds.playClick(); adjustTimer(-15); }}
+                  >
+                    <Text style={s.timerAdjText}>{t('timerSub')}</Text>
+                  </TouchableOpacity>
+
+                  <CountdownTimer
+                    key={timerKey}
+                    seconds={effectiveTimer}
+                    onComplete={handleTimerComplete}
+                  />
+
+                  <TouchableOpacity
+                    style={[s.timerAdj, s.timerAdjAdd]}
+                    onPress={() => { Sounds.playClick(); adjustTimer(+15); }}
+                  >
+                    <Text style={[s.timerAdjText, { color: '#6FCF4A' }]}>{t('timerAdd')}</Text>
+                  </TouchableOpacity>
+                </View>
+
                 <TouchableOpacity style={s.skipTimer} onPress={() => { Sounds.playClick(); handleTimerComplete(); }}>
                   <Text style={s.skipTimerText}>{t('skipTimer')}</Text>
                 </TouchableOpacity>
@@ -246,17 +280,15 @@ export default function GameScreen() {
   );
 }
 
-/* ─── Styles ─── */
 const s = StyleSheet.create({
   safe: { flex: 1 },
   root: { flex: 1, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 16, gap: 0 },
 
-  // HUD
   hud: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   hudPlayer: { flex: 1, alignItems: 'flex-start' },
   hudRight:  { alignItems: 'flex-end' },
   hudName: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5, color: Colors.text.muted, maxWidth: 100 },
-  hudNameActive: { color: Colors.text.primary, opacity: 1 },
+  hudNameActive: { color: Colors.text.primary },
   hudScore: { fontSize: 28, fontWeight: '900', color: Colors.text.muted, lineHeight: 32 },
   hudSkips: { fontSize: 10, color: Colors.brand.fire, marginTop: 2, letterSpacing: 1 },
   hudCenter: { alignItems: 'center', gap: 2, paddingHorizontal: 8 },
@@ -265,26 +297,30 @@ const s = StyleSheet.create({
   endBtn: { marginTop: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, borderWidth: 1, borderColor: Colors.brand.crimson + '55' },
   endBtnText: { color: Colors.brand.crimson, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
 
-  // Turn chip
   chipOuter: { alignItems: 'center', marginBottom: 10 },
   chipGradient: { borderRadius: 28, padding: 1.5 },
   chipInner: { backgroundColor: Colors.bg.dark, borderRadius: 26, paddingVertical: 10, paddingHorizontal: 36, alignItems: 'center' },
   chipLabel: { color: Colors.text.muted, fontSize: 9, fontWeight: '700', letterSpacing: 3 },
   chipName: { color: Colors.text.primary, fontSize: 26, letterSpacing: 2, lineHeight: 30 },
 
-  // Spark divider
   sparkWrap: { alignItems: 'center', marginBottom: 14 },
   sparkLine: { height: 1, width: '80%' },
 
-  // Main
   main: { flex: 1, gap: 10 },
 
-  // Choosing TOD grid
   todWrap: { flex: 1, justifyContent: 'center' },
   todGrid: { flexDirection: 'row', gap: 14 },
 
-  // Timer
+  // Timer with adjustment
   timerBlock: { alignItems: 'center', gap: 10, paddingTop: 8 },
+  timerRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  timerAdj: {
+    paddingVertical: 10, paddingHorizontal: 14, borderRadius: 14,
+    borderWidth: 1.5, borderColor: Colors.brand.crimson + '60',
+    backgroundColor: 'rgba(232,64,64,0.08)',
+  },
+  timerAdjAdd: { borderColor: '#6FCF4A' + '60', backgroundColor: 'rgba(63,207,74,0.08)' },
+  timerAdjText: { color: Colors.brand.crimson, fontSize: 14, fontWeight: '800', letterSpacing: 0.5 },
   skipTimer: { paddingVertical: 10, paddingHorizontal: 28, borderRadius: 22, borderWidth: 1.5, borderColor: Colors.text.muted + '55' },
   skipTimerText: { color: Colors.text.muted, fontSize: 13, fontWeight: '600', letterSpacing: 1 },
 });
