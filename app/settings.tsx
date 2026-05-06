@@ -6,11 +6,13 @@ import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View
 import GlowButton from '../src/components/ui/GlowButton';
 import GradientBackground from '../src/components/ui/GradientBackground';
 import { Colors } from '../src/constants/colors';
-import { CardType } from '../src/data/types';
+import { CardType, Prize } from '../src/data/types';
 import { Lang, tr } from '../src/i18n';
 import { useGameStore } from '../src/store/gameStore';
 
-function parseCsv(text: string, lang: Lang) {
+// ─── CSV parsers ─────────────────────────────────────────────────────────────
+
+function parseCsv(text: string, lang: Lang, packId?: string) {
   const lines = text.replace(/\r/g, '').trim().split('\n').filter(l => l.trim());
   const cards: any[] = [];
   let skipped = 0;
@@ -18,19 +20,55 @@ function parseCsv(text: string, lang: Lang) {
     const parts = line.split(',').map(p => p.trim());
     if (parts.length < 3) { skipped++; continue; }
     const [rawLevel, rawType, ...rest] = parts;
-    const cardText = rest.join(',').trim();
     if (!['hot','scorching','hardcore'].includes(rawLevel)) { skipped++; continue; }
     if (!['truth','dare'].includes(rawType)) { skipped++; continue; }
+
+    // Detect optional 4th column: timer (positive integer as last part)
+    let timerSeconds: number | undefined;
+    let textParts = [...rest];
+    if (rest.length >= 2) {
+      const lastPart = rest[rest.length - 1];
+      const maybeTimer = parseInt(lastPart, 10);
+      if (!isNaN(maybeTimer) && maybeTimer > 0 && String(maybeTimer) === lastPart) {
+        timerSeconds = maybeTimer;
+        textParts = rest.slice(0, -1);
+      }
+    }
+    const cardText = textParts.join(',').trim();
     if (!cardText) { skipped++; continue; }
+
     cards.push({
       id: `csv-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
       type: rawType as CardType,
       level: rawLevel as any,
       text: cardText,
       lang,
+      timerSeconds,
+      packId,
     });
   }
   return cards.length > 0 ? { cards, skipped } : null;
+}
+
+function parsePrizeCsv(text: string, lang: Lang): { prizes: Prize[]; skipped: number } | null {
+  const lines = text.replace(/\r/g, '').trim().split('\n').filter(l => l.trim());
+  const prizes: Prize[] = [];
+  let skipped = 0;
+  for (const line of lines) {
+    const idx = line.indexOf(',');
+    if (idx < 0) { skipped++; continue; }
+    const kind = line.slice(0, idx).trim().toLowerCase();
+    const prizeText = line.slice(idx + 1).trim();
+    if (!prizeText) { skipped++; continue; }
+    if (kind !== 'individual' && kind !== 'collaborative') { skipped++; continue; }
+    prizes.push({
+      id: `prize-csv-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+      text: prizeText,
+      lang,
+      collaborative: kind === 'collaborative',
+    });
+  }
+  return prizes.length > 0 ? { prizes, skipped } : null;
 }
 
 // ─── Round spinner ────────────────────────────────────────────────────────────
@@ -104,6 +142,7 @@ export default function SettingsScreen() {
     language, setLanguage, gameRounds, setGameRounds,
     customCards, addCustomCard, removeCustomCard, removeCustomCards, addCustomCards, clearCustomCards,
     packs, addPack, removePack, togglePack, disabledPackIds,
+    customPrizes, addPrize, addPrizes, removePrize, clearCustomPrizes,
   } = useGameStore();
   const t = (k: string) => tr(language, k);
   const isRtl = language === 'he';
@@ -115,17 +154,26 @@ export default function SettingsScreen() {
   const [customPackId, setCustomPackId] = useState<string | undefined>(undefined);
 
   // CSV state
-  const [csvText, setCsvText] = useState('');
-  const [csvMsg, setCsvMsg]   = useState<{ text: string; ok: boolean } | null>(null);
+  const [csvText, setCsvText]   = useState('');
+  const [csvMsg, setCsvMsg]     = useState<{ text: string; ok: boolean } | null>(null);
+  const [csvPackName, setCsvPackName] = useState('');
+  const [showCsvPackInput, setShowCsvPackInput] = useState(false);
+
+  // Prize state
+  const [newPrizeText, setNewPrizeText]         = useState('');
+  const [newPrizeCollab, setNewPrizeCollab]      = useState(false);
+  const [prizeCsvText, setPrizeCsvText]          = useState('');
+  const [prizeCsvMsg, setPrizeCsvMsg]            = useState<{ text: string; ok: boolean } | null>(null);
 
   // Collapsible panels
-  const [showCustom, setShowCustom] = useState(false);
-  const [showCsv, setShowCsv]       = useState(false);
-  const [showPacks, setShowPacks]   = useState(false);
+  const [showCustom, setShowCustom]   = useState(false);
+  const [showCsv, setShowCsv]         = useState(false);
+  const [showPacks, setShowPacks]     = useState(false);
+  const [showPrizes, setShowPrizes]   = useState(false);
 
-  // Multi-select for deletion
-  const [selectMode, setSelectMode]   = useState(false);
-  const [selected, setSelected]       = useState<Set<string>>(new Set());
+  // Multi-select
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected]     = useState<Set<string>>(new Set());
 
   // Pack creation
   const [newPackName, setNewPackName]   = useState('');
@@ -144,10 +192,20 @@ export default function SettingsScreen() {
   };
 
   const doImport = (text: string) => {
-    const result = parseCsv(text, language);
-    if (!result) { setCsvMsg({ text: t('importError'), ok: false }); return; }
+    // If user wants a named pack, create it first
+    let packId: string | undefined;
+    if (csvPackName.trim()) {
+      packId = addPack(csvPackName.trim(), '📦', language);
+    }
+    const result = parseCsv(text, language, packId);
+    if (!result) {
+      setCsvMsg({ text: t('importError'), ok: false });
+      return;
+    }
     addCustomCards(result.cards);
     setCsvText('');
+    setCsvPackName('');
+    setShowCsvPackInput(false);
     setCsvMsg({ text: `${result.cards.length} ${t('importSuccess')}${result.skipped > 0 ? ` (${result.skipped} skipped)` : ''}`, ok: true });
     setTimeout(() => setCsvMsg(null), 3000);
   };
@@ -164,6 +222,15 @@ export default function SettingsScreen() {
     }
   };
 
+  const doImportPrizes = (text: string) => {
+    const result = parsePrizeCsv(text, language);
+    if (!result) { setPrizeCsvMsg({ text: t('importError'), ok: false }); return; }
+    addPrizes(result.prizes);
+    setPrizeCsvText('');
+    setPrizeCsvMsg({ text: `${result.prizes.length} ${t('importSuccess')}`, ok: true });
+    setTimeout(() => setPrizeCsvMsg(null), 3000);
+  };
+
   const handleCreatePack = () => {
     if (!newPackName.trim()) return;
     addPack(newPackName.trim(), newPackEmoji, language);
@@ -172,10 +239,13 @@ export default function SettingsScreen() {
   };
 
   // Cards for current language only
-  const visibleCards  = customCards.filter(c => c.lang === language);
-  const otherLangCount = customCards.length - visibleCards.length;
+  const visibleCards = customCards.filter(c => c.lang === language);
   // Packs for current language
-  const visiblePacks  = packs.filter(p => p.lang === language);
+  const visiblePacks = packs.filter(p => p.lang === language);
+  // Prizes for current language
+  const visiblePrizes        = customPrizes.filter(p => p.lang === language);
+  const visibleIndividual    = visiblePrizes.filter(p => !p.collaborative);
+  const visibleCollaborative = visiblePrizes.filter(p => p.collaborative);
 
   return (
     <GradientBackground>
@@ -208,10 +278,9 @@ export default function SettingsScreen() {
         </TouchableOpacity>
         {showPacks && (
           <View style={styles.panel}>
-            {/* Create pack */}
             <View style={styles.packCreateRow}>
               <TextInput
-                style={[styles.emojiInput]}
+                style={styles.emojiInput}
                 value={newPackEmoji}
                 onChangeText={setNewPackEmoji}
                 maxLength={2}
@@ -231,7 +300,6 @@ export default function SettingsScreen() {
             {visiblePacks.length === 0 && (
               <Text style={styles.emptyNote}>{t('noPacks')}</Text>
             )}
-
             {visiblePacks.map(pack => {
               const count = visibleCards.filter(c => c.packId === pack.id).length;
               const disabled = disabledPackIds.includes(pack.id);
@@ -261,13 +329,11 @@ export default function SettingsScreen() {
         <TouchableOpacity style={styles.sectionHeader} onPress={() => { setShowCustom(v => !v); setSelectMode(false); setSelected(new Set()); }}>
           <Text style={styles.sectionLabel}>
             {t('customSection')}{visibleCards.length > 0 ? ` (${visibleCards.length})` : ''}
-            {otherLangCount > 0 ? ` +${otherLangCount} other lang` : ''}
           </Text>
           <Text style={styles.chevron}>{showCustom ? '▲' : '▼'}</Text>
         </TouchableOpacity>
         {showCustom && (
           <View style={styles.panel}>
-            {/* Type selector */}
             <View style={styles.typeRow}>
               {(['truth','dare'] as CardType[]).map(type => (
                 <TouchableOpacity key={type} style={[styles.typeBtn, customType===type && styles.typeBtnActive]} onPress={() => { setCustomType(type); if (type === 'truth') setCustomTimer(0); }}>
@@ -286,7 +352,6 @@ export default function SettingsScreen() {
               maxLength={200}
             />
 
-            {/* Timer (dare only) */}
             {customType === 'dare' && (
               <View style={styles.timerWrap}>
                 <Text style={styles.timerLabel}>⏱ {t('timerLabel')}</Text>
@@ -294,7 +359,6 @@ export default function SettingsScreen() {
               </View>
             )}
 
-            {/* Pack assignment */}
             {visiblePacks.length > 0 && (
               <View style={styles.packAssignRow}>
                 <Text style={styles.timerLabel}>📦 {t('assignPack')}</Text>
@@ -334,7 +398,6 @@ export default function SettingsScreen() {
               <Text style={styles.addBtnText}>{t('addBtn')}</Text>
             </TouchableOpacity>
 
-            {/* Toolbar */}
             {visibleCards.length > 0 && (
               <View style={styles.toolbar}>
                 <TouchableOpacity onPress={() => { setSelectMode(v => !v); setSelected(new Set()); }}>
@@ -353,7 +416,6 @@ export default function SettingsScreen() {
               </View>
             )}
 
-            {/* Card list grouped by pack */}
             {visibleCards.length === 0 && (
               <Text style={styles.emptyNote}>{language === 'he' ? 'אין שאלות מותאמות לעברית' : 'No custom questions for English'}</Text>
             )}
@@ -398,6 +460,26 @@ export default function SettingsScreen() {
         {showCsv && (
           <View style={styles.panel}>
             <Text style={styles.csvHelp}>{t('csvHelp')}</Text>
+
+            {/* Named pack for CSV import */}
+            <TouchableOpacity
+              style={styles.csvPackToggle}
+              onPress={() => setShowCsvPackInput(v => !v)}
+            >
+              <Text style={styles.csvPackToggleText}>
+                {showCsvPackInput ? '▲' : '▼'}  {language === 'he' ? 'ייבא לחבילה חדשה (אופציונלי)' : 'Import into a new pack (optional)'}
+              </Text>
+            </TouchableOpacity>
+            {showCsvPackInput && (
+              <TextInput
+                style={[styles.textInput, { minHeight: 44, paddingVertical: 8 }]}
+                placeholder={language === 'he' ? 'שם החבילה...' : 'Pack name...'}
+                placeholderTextColor={Colors.text.muted}
+                value={csvPackName}
+                onChangeText={setCsvPackName}
+              />
+            )}
+
             <GlowButton label={t('pickCsvFile')} onPress={pickFile} colors={['#1a3a00','#3D7000']} style={styles.pickBtn} fontSize={15} />
             <Text style={styles.orText}>— {language==='he' ? 'או הדבק טקסט' : 'or paste text'} —</Text>
             <TextInput
@@ -412,6 +494,100 @@ export default function SettingsScreen() {
             />
             {csvMsg && <Text style={[styles.csvMsg, csvMsg.ok ? styles.csvMsgOk : styles.csvMsgErr]}>{csvMsg.text}</Text>}
             <GlowButton label={t('importBtn')} onPress={() => doImport(csvText)} colors={['#1a3a00','#3D7000']} fontSize={15} />
+          </View>
+        )}
+
+        {/* ── Prizes ── */}
+        <TouchableOpacity style={styles.sectionHeader} onPress={() => setShowPrizes(v => !v)}>
+          <Text style={styles.sectionLabel}>{t('prizesSection')}{visiblePrizes.length > 0 ? ` (${visiblePrizes.length})` : ''}</Text>
+          <Text style={styles.chevron}>{showPrizes ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+        {showPrizes && (
+          <View style={styles.panel}>
+            {/* Add prize form */}
+            <View style={styles.typeRow}>
+              <TouchableOpacity
+                style={[styles.typeBtn, !newPrizeCollab && styles.typeBtnActive]}
+                onPress={() => setNewPrizeCollab(false)}
+              >
+                <Text style={[styles.typeBtnText, !newPrizeCollab && styles.typeBtnTextActive]}>🏆 {t('individualPrize')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.typeBtn, newPrizeCollab && styles.typeBtnActive]}
+                onPress={() => setNewPrizeCollab(true)}
+              >
+                <Text style={[styles.typeBtnText, newPrizeCollab && styles.typeBtnTextActive]}>💑 {t('collaborativePrizeLabel')}</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={[styles.textInput, isRtl && styles.rtl]}
+              placeholder={t('writePrize')}
+              placeholderTextColor={Colors.text.muted}
+              value={newPrizeText}
+              onChangeText={setNewPrizeText}
+              maxLength={100}
+            />
+            <TouchableOpacity
+              style={[styles.addBtn, !newPrizeText.trim() && styles.addBtnDisabled]}
+              onPress={() => {
+                if (!newPrizeText.trim()) return;
+                addPrize(newPrizeText.trim(), newPrizeCollab, language);
+                setNewPrizeText('');
+              }}
+            >
+              <Text style={styles.addBtnText}>{t('addPrize')}</Text>
+            </TouchableOpacity>
+
+            {/* Prize CSV import */}
+            <Text style={styles.csvHelp}>{t('prizeCsvHelp')}</Text>
+            <TextInput
+              style={[styles.textInput, styles.csvInput]}
+              placeholder={t('prizeCsvPlaceholder')}
+              placeholderTextColor={Colors.text.muted}
+              value={prizeCsvText}
+              onChangeText={setPrizeCsvText}
+              multiline
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+            {prizeCsvMsg && <Text style={[styles.csvMsg, prizeCsvMsg.ok ? styles.csvMsgOk : styles.csvMsgErr]}>{prizeCsvMsg.text}</Text>}
+            <GlowButton label={t('importPrizes')} onPress={() => doImportPrizes(prizeCsvText)} colors={['#1a3a00','#3D7000']} fontSize={15} />
+
+            {/* Prize list */}
+            {visiblePrizes.length === 0 && (
+              <Text style={styles.emptyNote}>{t('noPrizes')}</Text>
+            )}
+            {visibleIndividual.length > 0 && (
+              <>
+                <Text style={styles.prizeGroupLabel}>🏆 {t('individualPrize')}</Text>
+                {visibleIndividual.map(p => (
+                  <View key={p.id} style={styles.prizeRow}>
+                    <Text style={styles.prizeText} numberOfLines={2}>{p.text}</Text>
+                    <TouchableOpacity onPress={() => removePrize(p.id)}>
+                      <Text style={styles.deleteBtnText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </>
+            )}
+            {visibleCollaborative.length > 0 && (
+              <>
+                <Text style={styles.prizeGroupLabel}>💑 {t('collaborativePrizeLabel')}</Text>
+                {visibleCollaborative.map(p => (
+                  <View key={p.id} style={styles.prizeRow}>
+                    <Text style={styles.prizeText} numberOfLines={2}>{p.text}</Text>
+                    <TouchableOpacity onPress={() => removePrize(p.id)}>
+                      <Text style={styles.deleteBtnText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </>
+            )}
+            {visiblePrizes.length > 0 && (
+              <TouchableOpacity onPress={clearCustomPrizes} style={{ alignSelf: 'flex-end', marginTop: 4 }}>
+                <Text style={[styles.toolbarBtn, styles.toolbarDanger]}>{t('clearAll')}</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>
@@ -480,4 +656,11 @@ const styles = StyleSheet.create({
   csvMsg: { fontSize: 13, fontWeight: '700', textAlign: 'center', paddingVertical: 6 },
   csvMsgOk: { color: '#6FCF4A' },
   csvMsgErr: { color: Colors.brand.crimson },
+  // CSV pack name input toggle
+  csvPackToggle: { paddingVertical: 8 },
+  csvPackToggleText: { color: Colors.brand.neonBlue, fontSize: 13, fontWeight: '700' },
+  // Prizes
+  prizeGroupLabel: { color: Colors.text.muted, fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 8 },
+  prizeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 10 },
+  prizeText: { flex: 1, color: Colors.text.secondary, fontSize: 13, lineHeight: 18 },
 });

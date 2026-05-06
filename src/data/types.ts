@@ -1,5 +1,12 @@
 import { Lang } from '../i18n';
 
+export interface Prize {
+  id: string;
+  text: string;
+  lang: Lang;
+  collaborative: boolean;
+}
+
 export type SpiceLevel = 'hot' | 'scorching' | 'hardcore';
 export type CardType   = 'truth' | 'dare';
 export type GamePhase  =
@@ -67,6 +74,6 @@ export interface GameState {
   phase: GamePhase;
   turnNumber: number;
   pendingForfeit: ForfeitCard | null;
-  skipsRemaining: number;
+  skipsRemaining: [number, number];
   history: HistoryEntry[];
 }

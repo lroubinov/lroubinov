@@ -4,7 +4,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import GradientBackground from '../src/components/ui/GradientBackground';
 import ParticleBackground from '../src/components/ui/ParticleBackground';
+import PrizeWheel from '../src/components/ui/PrizeWheel';
 import { Colors } from '../src/constants/colors';
+import { defaultPrizes } from '../src/data/prizes';
 import { HistoryEntry } from '../src/data/types';
 import { tr } from '../src/i18n';
 import { Sounds } from '../src/utils/sounds';
@@ -54,11 +56,11 @@ const h = StyleSheet.create({
 });
 
 export default function ResultsScreen() {
-  const { gameState, resetGame, startGame, language } = useGameStore();
+  const { gameState, resetGame, startGame, language, customPrizes } = useGameStore();
   const t = (key: string) => tr(language, key);
-  const isRtl = language === 'he';
 
   const [showHistory, setShowHistory] = useState(false);
+  const [wonPrize, setWonPrize]       = useState<string | null>(null);
 
   const winnerScale   = useRef(new Animated.Value(0.6)).current;
   const winnerOpacity = useRef(new Animated.Value(0)).current;
@@ -85,6 +87,13 @@ export default function ResultsScreen() {
   const isDraw   = p1.score === p2.score;
   const winner   = isDraw ? null : p1.score > p2.score ? p1 : p2;
   const history  = gameState.history ?? [];
+
+  // Resolve prizes: use custom if any, else defaults
+  const allPrizes = customPrizes.length > 0 ? customPrizes : defaultPrizes;
+  const langPrizes = allPrizes.filter(p => p.lang === language);
+  const individualPrizes    = langPrizes.filter(p => !p.collaborative).map(p => p.text);
+  const collaborativePrizes = langPrizes.filter(p => p.collaborative).map(p => p.text);
+  const wheelPrizes = isDraw ? collaborativePrizes : individualPrizes;
 
   const handlePlayAgain = () => { Sounds.playClick(); startGame(); router.replace('/game'); };
   const handleNewGame   = () => { Sounds.playClick(); resetGame(); router.replace('/'); };
@@ -150,6 +159,33 @@ export default function ResultsScreen() {
           </Animated.View>
         </View>
 
+        {/* Prize wheel */}
+        {wheelPrizes.length > 0 && (
+          <View style={s.prizeSection}>
+            <Text style={[s.prizeSectionTitle, { fontFamily: 'Exo2_700Bold' }]}>
+              {isDraw ? t('spinCollaborative') : t('spinForPrize')}
+            </Text>
+            {wonPrize ? (
+              <View style={s.prizeResult}>
+                <Text style={s.prizeResultEmoji}>🎁</Text>
+                <Text style={[s.prizeResultLabel, { fontFamily: 'Exo2_700Bold' }]}>
+                  {isDraw ? t('collaborativePrize') : t('yourPrize')}
+                </Text>
+                <Text style={[s.prizeResultText, { fontFamily: 'BebasNeue_400Regular' }]}>{wonPrize}</Text>
+                <TouchableOpacity onPress={() => setWonPrize(null)} style={s.spinAgainBtn}>
+                  <Text style={s.spinAgainText}>{t('spinAgain')}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <PrizeWheel
+                prizes={wheelPrizes}
+                spinLabel={t('spinBtn')}
+                onComplete={(prize) => { Sounds.playDone(); setWonPrize(prize); }}
+              />
+            )}
+          </View>
+        )}
+
         {/* Turn history */}
         {history.length > 0 && (
           <View style={s.historySection}>
@@ -214,6 +250,16 @@ const s = StyleSheet.create({
   forfeitBadge: { color: Colors.brand.crimson, fontSize: 11, fontWeight: '700', marginTop: 4 },
   vsWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
   vs: { color: Colors.text.muted, fontSize: 16, letterSpacing: 1 },
+
+  // Prize wheel
+  prizeSection: { width: '100%', gap: 14, alignItems: 'center', paddingVertical: 12, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  prizeSectionTitle: { color: Colors.brand.gold, fontSize: 15, letterSpacing: 1, textAlign: 'center' },
+  prizeResult: { alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 16 },
+  prizeResultEmoji: { fontSize: 48 },
+  prizeResultLabel: { color: Colors.text.muted, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' },
+  prizeResultText: { color: Colors.brand.gold, fontSize: 28, letterSpacing: 2, textAlign: 'center', lineHeight: 34 },
+  spinAgainBtn: { marginTop: 8, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 16, borderWidth: 1.5, borderColor: Colors.text.muted + '50' },
+  spinAgainText: { color: Colors.text.muted, fontSize: 13, fontWeight: '700' },
 
   historySection: { width: '100%', gap: 10 },
   historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },

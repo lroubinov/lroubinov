@@ -1,0 +1,61 @@
+import { Prize } from './types';
+
+export const defaultPrizes: Prize[] = [
+  // ── English individual (20) ──────────────────────────────────────────────────
+  { id: 'en-i-1',  text: 'You choose the next drink',                lang: 'en', collaborative: false },
+  { id: 'en-i-2',  text: 'Loser gives you a 5-minute massage',       lang: 'en', collaborative: false },
+  { id: 'en-i-3',  text: 'Pick a new dare for your partner',         lang: 'en', collaborative: false },
+  { id: 'en-i-4',  text: 'Loser does the dishes tonight',            lang: 'en', collaborative: false },
+  { id: 'en-i-5',  text: 'Get a kiss wherever you choose',           lang: 'en', collaborative: false },
+  { id: 'en-i-6',  text: 'Pick the restaurant for your next date',   lang: 'en', collaborative: false },
+  { id: 'en-i-7',  text: 'Loser buys you dessert',                   lang: 'en', collaborative: false },
+  { id: 'en-i-8',  text: 'You choose the movie for tonight',         lang: 'en', collaborative: false },
+  { id: 'en-i-9',  text: 'Get a full back massage',                  lang: 'en', collaborative: false },
+  { id: 'en-i-10', text: 'Loser cooks breakfast tomorrow',           lang: 'en', collaborative: false },
+  { id: 'en-i-11', text: 'You control the music all night',          lang: 'en', collaborative: false },
+  { id: 'en-i-12', text: 'Loser gives you a foot rub',               lang: 'en', collaborative: false },
+  { id: 'en-i-13', text: 'Pick an outfit for your partner',          lang: 'en', collaborative: false },
+  { id: 'en-i-14', text: 'Loser does 20 push-ups right now',         lang: 'en', collaborative: false },
+  { id: 'en-i-15', text: 'Get a slow dance of your choice',          lang: 'en', collaborative: false },
+  { id: 'en-i-16', text: 'Loser writes you three compliments',       lang: 'en', collaborative: false },
+  { id: 'en-i-17', text: 'Loser brings you breakfast in bed',        lang: 'en', collaborative: false },
+  { id: 'en-i-18', text: 'A 10-second kiss anywhere you like',       lang: 'en', collaborative: false },
+  { id: 'en-i-19', text: 'Loser does your chores for a day',         lang: 'en', collaborative: false },
+  { id: 'en-i-20', text: 'Name something loser must say for 1 hour', lang: 'en', collaborative: false },
+
+  // ── English collaborative (5) ────────────────────────────────────────────────
+  { id: 'en-c-1', text: 'Take a shot together 🥂',                 lang: 'en', collaborative: true },
+  { id: 'en-c-2', text: 'Slow dance to your favorite song 💃',     lang: 'en', collaborative: true },
+  { id: 'en-c-3', text: 'Cook a meal together tonight 🍳',         lang: 'en', collaborative: true },
+  { id: 'en-c-4', text: 'Watch your favorite movie together 🎬',   lang: 'en', collaborative: true },
+  { id: 'en-c-5', text: 'Plan a surprise date for each other 💑',  lang: 'en', collaborative: true },
+
+  // ── Hebrew individual (20) ───────────────────────────────────────────────────
+  { id: 'he-i-1',  text: 'את/ה בוחר/ת את המשקה הבא',                  lang: 'he', collaborative: false },
+  { id: 'he-i-2',  text: 'המפסיד/ה נותן/ת לך עיסוי 5 דקות',           lang: 'he', collaborative: false },
+  { id: 'he-i-3',  text: 'בחר/י חובה חדשה לבן/בת הזוג',               lang: 'he', collaborative: false },
+  { id: 'he-i-4',  text: 'המפסיד/ה שוטף/ת את הכלים הלילה',            lang: 'he', collaborative: false },
+  { id: 'he-i-5',  text: 'תקבל/י נשיקה בכל מקום שתבחר/י',             lang: 'he', collaborative: false },
+  { id: 'he-i-6',  text: 'בחר/י את המסעדה לדייט הבא',                 lang: 'he', collaborative: false },
+  { id: 'he-i-7',  text: 'המפסיד/ה קונה לך קינוח',                    lang: 'he', collaborative: false },
+  { id: 'he-i-8',  text: 'את/ה בוחר/ת את הסרט הלילה',                 lang: 'he', collaborative: false },
+  { id: 'he-i-9',  text: 'תקבל/י עיסוי גב מלא',                       lang: 'he', collaborative: false },
+  { id: 'he-i-10', text: 'המפסיד/ה מכין/ה ארוחת בוקר מחר',            lang: 'he', collaborative: false },
+  { id: 'he-i-11', text: 'את/ה שולט/ת במוזיקה כל הלילה',              lang: 'he', collaborative: false },
+  { id: 'he-i-12', text: 'המפסיד/ה נותן/ת לך עיסוי כפות רגליים',      lang: 'he', collaborative: false },
+  { id: 'he-i-13', text: 'בחר/י תלבושת לבן/בת הזוג',                  lang: 'he', collaborative: false },
+  { id: 'he-i-14', text: 'המפסיד/ה עושה 20 שכיבות סמיכה עכשיו',       lang: 'he', collaborative: false },
+  { id: 'he-i-15', text: 'תקבל/י ריקוד איטי לפי בחירתך',              lang: 'he', collaborative: false },
+  { id: 'he-i-16', text: 'המפסיד/ה כותב/ת לך שלושה מחמאות',           lang: 'he', collaborative: false },
+  { id: 'he-i-17', text: 'המפסיד/ה מגיש/ה לך ארוחת בוקר במיטה',      lang: 'he', collaborative: false },
+  { id: 'he-i-18', text: 'נשיקה של 10 שניות בכל מקום שתרצה',          lang: 'he', collaborative: false },
+  { id: 'he-i-19', text: 'המפסיד/ה עושה את המטלות שלך יום שלם',       lang: 'he', collaborative: false },
+  { id: 'he-i-20', text: 'בחר/י משהו שהמפסיד/ה יגיד/תגיד שעה שלמה',  lang: 'he', collaborative: false },
+
+  // ── Hebrew collaborative (5) ─────────────────────────────────────────────────
+  { id: 'he-c-1', text: 'שותים יחד לחיים 🥂',                    lang: 'he', collaborative: true },
+  { id: 'he-c-2', text: 'ריקוד איטי לשיר האהוב 💃',              lang: 'he', collaborative: true },
+  { id: 'he-c-3', text: 'מבשלים ביחד הלילה 🍳',                  lang: 'he', collaborative: true },
+  { id: 'he-c-4', text: 'צופים ביחד בסרט האהוב 🎬',              lang: 'he', collaborative: true },
+  { id: 'he-c-5', text: 'מתכננים הפתעה זה לזה 💑',               lang: 'he', collaborative: true },
+];

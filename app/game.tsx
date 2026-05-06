@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ActionButtons from '../src/components/game/ActionButtons';
 import CardReveal from '../src/components/game/CardReveal';
@@ -13,9 +13,16 @@ import { tr } from '../src/i18n';
 import { Sounds } from '../src/utils/sounds';
 import { useGameStore } from '../src/store/gameStore';
 
-// Truth or Dare selection card
-function TODCard({ type, label, emoji, onPress }: { type: 'truth' | 'dare'; label: string; emoji: string; onPress: () => void }) {
-  const scale   = useRef(new Animated.Value(1)).current;
+// Truth or Dare selection card with exit animation
+interface TODCardProps {
+  type: 'truth' | 'dare';
+  label: string;
+  emoji: string;
+  onPress: () => void;
+  exitAnim: Animated.Value; // shared exit animation value
+}
+
+function TODCard({ type, label, emoji, onPress, exitAnim }: TODCardProps) {
   const pulse   = useRef(new Animated.Value(1)).current;
   const shimmer = useRef(new Animated.Value(-200)).current;
 
@@ -33,22 +40,18 @@ function TODCard({ type, label, emoji, onPress }: { type: 'truth' | 'dare'; labe
     }
   }, []);
 
-  const handlePress = () => {
-    type === 'dare' ? Sounds.playDare() : Sounds.playClick();
-    Animated.sequence([
-      Animated.timing(scale, { toValue: 0.92, duration: 80,  useNativeDriver: true }),
-      Animated.timing(scale, { toValue: 1,    duration: 160, useNativeDriver: true }),
-    ]).start();
-    onPress();
-  };
-
-  const isTruth  = type === 'truth';
-  const accent   = isTruth ? Colors.brand.neonBlue : Colors.brand.fire;
-  const bgColor  = isTruth ? 'rgba(61,214,245,0.08)' : 'rgba(255,69,0,0.12)';
+  const isTruth = type === 'truth';
+  const accent  = isTruth ? Colors.brand.neonBlue : Colors.brand.fire;
+  const bgColor = isTruth ? 'rgba(61,214,245,0.08)' : 'rgba(255,69,0,0.12)';
 
   return (
-    <Animated.View style={[tod.wrap, { transform: [{ scale: Animated.multiply(scale, pulse) }] }]}>
-      <TouchableOpacity onPress={handlePress} activeOpacity={0.9}
+    <Animated.View style={[tod.wrap, { transform: [{ scale: Animated.multiply(exitAnim, pulse) }], opacity: exitAnim }]}>
+      <TouchableOpacity
+        onPress={() => {
+          type === 'dare' ? Sounds.playDare() : Sounds.playClick();
+          onPress();
+        }}
+        activeOpacity={0.9}
         style={[tod.card, { backgroundColor: bgColor, borderColor: accent }]}
       >
         <View style={[tod.strip, { backgroundColor: accent }]} />
@@ -71,11 +74,20 @@ export default function GameScreen() {
   const cardRef = useRef<AnimatedCardRef>(null);
   const gs = gameState;
 
+  // Exit animation for TOD cards (shared between both)
+  const todExit = useRef(new Animated.Value(1)).current;
+  const [isExiting, setIsExiting] = useState(false);
+
   useEffect(() => {
     if (!gs) { router.replace('/'); return; }
     if (gs.phase === 'game_over') router.replace('/results');
     if (gs.phase === 'forfeit')   router.push('/forfeit');
-    if (gs.phase === 'choosing')  cardRef.current?.reset();
+    if (gs.phase === 'choosing') {
+      cardRef.current?.reset();
+      // Reset exit animation for new turn
+      todExit.setValue(1);
+      setIsExiting(false);
+    }
   }, [gs?.phase]);
 
   if (!gs) return null;
@@ -90,11 +102,27 @@ export default function GameScreen() {
     : `${Math.min(currentRound, gs.config.totalRounds)} / ${gs.config.totalRounds}`;
 
   const handleTypeSelect = (type: 'truth' | 'dare') => {
-    selectCardType(type);
-    setTimeout(() => cardRef.current?.flip(), 50);
+    if (isExiting) return;
+    setIsExiting(true);
+    // Animate TOD cards out
+    Animated.timing(todExit, {
+      toValue: 0,
+      duration: 160,
+      useNativeDriver: true,
+    }).start(() => {
+      selectCardType(type);
+      setTimeout(() => cardRef.current?.flip(), 30);
+    });
+  };
+
+  const handleTimerComplete = () => {
+    Sounds.playDing();
+    onTimerComplete();
   };
 
   const isChoosing = gs.phase === 'choosing';
+  const p1Skips = gs.skipsRemaining[0];
+  const p2Skips = gs.skipsRemaining[1];
 
   return (
     <GradientBackground colors={Colors.gradient.splash}>
@@ -112,6 +140,7 @@ export default function GameScreen() {
               <Text style={[s.hudScore, gs.currentPlayerIndex === 0 && { color: Colors.brand.gold }]}>
                 {gs.config.players[0].score}
               </Text>
+              <Text style={s.hudSkips}>{'⚡'.repeat(Math.max(0, p1Skips))}{p1Skips === 0 ? '—' : ''}</Text>
             </View>
 
             {/* Center: round + end */}
@@ -131,6 +160,7 @@ export default function GameScreen() {
               <Text style={[s.hudScore, gs.currentPlayerIndex === 1 && { color: Colors.brand.gold }]}>
                 {gs.config.players[1].score}
               </Text>
+              <Text style={[s.hudSkips, { textAlign: 'right' }]}>{'⚡'.repeat(Math.max(0, p2Skips))}{p2Skips === 0 ? '—' : ''}</Text>
             </View>
           </View>
 
@@ -160,7 +190,7 @@ export default function GameScreen() {
           {/* ── Main content ── */}
           <View style={s.main}>
 
-            {/* AnimatedCard — always mounted; hidden during choosing to allow flip ref to work */}
+            {/* AnimatedCard — always mounted; invisible during choosing */}
             <View style={{ display: isChoosing ? 'none' : 'flex', flex: isChoosing ? 0 : 1 }}>
               <AnimatedCard
                 ref={cardRef}
@@ -180,8 +210,8 @@ export default function GameScreen() {
             {isChoosing && (
               <View style={s.todWrap}>
                 <View style={s.todGrid}>
-                  <TODCard type="truth" label={t('truth')} emoji="💬" onPress={() => handleTypeSelect('truth')} />
-                  <TODCard type="dare"  label={t('dare')}  emoji="🔥" onPress={() => handleTypeSelect('dare')}  />
+                  <TODCard type="truth" label={t('truth')} emoji="💬" onPress={() => handleTypeSelect('truth')} exitAnim={todExit} />
+                  <TODCard type="dare"  label={t('dare')}  emoji="🔥" onPress={() => handleTypeSelect('dare')}  exitAnim={todExit} />
                 </View>
               </View>
             )}
@@ -189,8 +219,8 @@ export default function GameScreen() {
             {/* Timer */}
             {gs.phase === 'timer_running' && (
               <View style={s.timerBlock}>
-                <CountdownTimer seconds={gs.currentCard?.timerSeconds ?? 30} onComplete={onTimerComplete} />
-                <TouchableOpacity style={s.skipTimer} onPress={() => { Sounds.playClick(); onTimerComplete(); }}>
+                <CountdownTimer seconds={gs.currentCard?.timerSeconds ?? 30} onComplete={handleTimerComplete} />
+                <TouchableOpacity style={s.skipTimer} onPress={() => { Sounds.playClick(); handleTimerComplete(); }}>
                   <Text style={s.skipTimerText}>{t('skipTimer')}</Text>
                 </TouchableOpacity>
               </View>
@@ -202,7 +232,7 @@ export default function GameScreen() {
             <ActionButtons
               onDone={() => { Sounds.playDone(); completeTurn(); }}
               onSkip={skipTurn}
-              skipsRemaining={gs.skipsRemaining}
+              skipsRemaining={gs.skipsRemaining[gs.currentPlayerIndex]}
               doneLabel={t('done')}
               skipLabel={t('skip')}
               skipsLeftLabel={t('skipsLeft')}
@@ -222,19 +252,20 @@ const s = StyleSheet.create({
   root: { flex: 1, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 16, gap: 0 },
 
   // HUD
-  hud: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  hud: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   hudPlayer: { flex: 1, alignItems: 'flex-start' },
   hudRight:  { alignItems: 'flex-end' },
   hudName: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5, color: Colors.text.muted, maxWidth: 100 },
   hudNameActive: { color: Colors.text.primary, opacity: 1 },
   hudScore: { fontSize: 28, fontWeight: '900', color: Colors.text.muted, lineHeight: 32 },
+  hudSkips: { fontSize: 10, color: Colors.brand.fire, marginTop: 2, letterSpacing: 1 },
   hudCenter: { alignItems: 'center', gap: 2, paddingHorizontal: 8 },
   hudRoundLabel: { color: Colors.text.muted, fontSize: 8, fontWeight: '700', letterSpacing: 2 },
   hudRound: { color: Colors.brand.gold, fontSize: 15, fontWeight: '900', lineHeight: 18 },
   endBtn: { marginTop: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, borderWidth: 1, borderColor: Colors.brand.crimson + '55' },
   endBtnText: { color: Colors.brand.crimson, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
 
-  // Turn chip (gradient border trick)
+  // Turn chip
   chipOuter: { alignItems: 'center', marginBottom: 10 },
   chipGradient: { borderRadius: 28, padding: 1.5 },
   chipInner: { backgroundColor: Colors.bg.dark, borderRadius: 26, paddingVertical: 10, paddingHorizontal: 36, alignItems: 'center' },

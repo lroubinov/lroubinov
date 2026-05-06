@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import GradientBackground from '../src/components/ui/GradientBackground';
 import ParticleBackground from '../src/components/ui/ParticleBackground';
 import { Colors } from '../src/constants/colors';
@@ -90,7 +90,8 @@ export default function HomeScreen() {
 
       <ParticleBackground />
 
-      <KeyboardAvoidingView style={s.kav} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingView style={s.kav} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
+        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
         {/* Top bar: language + settings */}
         <View style={s.topBar}>
@@ -192,13 +193,15 @@ export default function HomeScreen() {
 
         <Text style={[s.bottomHint, { fontFamily: 'Exo2_700Bold' }]}>🎮  2 Players · Couple Mode</Text>
 
+        </ScrollView>
       </KeyboardAvoidingView>
     </GradientBackground>
   );
 }
 
 const s = StyleSheet.create({
-  kav: { flex: 1, paddingHorizontal: 24, paddingTop: 52, paddingBottom: 16, gap: 10 },
+  kav: { flex: 1 },
+  scroll: { paddingHorizontal: 24, paddingTop: 52, paddingBottom: 32, gap: 10 },
   orb: { position: 'absolute', borderRadius: 999 },
 
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

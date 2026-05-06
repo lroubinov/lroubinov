@@ -4,7 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { Lang } from '../i18n';
 import {
   Card, CardType, ForfeitCard, GameConfig, GamePhase, GameRounds,
-  GameState, HistoryEntry, Pack, Player, SpiceLevel,
+  GameState, HistoryEntry, Pack, Player, Prize, SpiceLevel,
 } from '../data/types';
 import { truths } from '../data/truths';
 import { dares } from '../data/dares';
@@ -25,6 +25,7 @@ interface SetupState {
   disabledPackIds: string[];
   gameRounds: GameRounds;
   language: Lang;
+  customPrizes: Prize[];
 }
 
 interface GameStore extends SetupState {
@@ -42,6 +43,10 @@ interface GameStore extends SetupState {
   addPack: (name: string, emoji: string, lang: Lang) => string;
   removePack: (id: string) => void;
   togglePack: (id: string) => void;
+  addPrize: (text: string, collaborative: boolean, lang: Lang) => void;
+  addPrizes: (prizes: Prize[]) => void;
+  removePrize: (id: string) => void;
+  clearCustomPrizes: () => void;
   startGame: () => void;
   selectCardType: (type: CardType) => void;
   onRevealComplete: () => void;
@@ -102,6 +107,7 @@ export const useGameStore = create<GameStore>()(
       enabledLevels: ['hot'], customCards: [],
       packs: [], disabledPackIds: [],
       gameRounds: 10, language: 'en', gameState: null,
+      customPrizes: [],
 
       setPlayerNames:   (p1, p2) => set({ player1Name: p1, player2Name: p2 }),
       setPlayerGenders: (g1, g2) => set({ player1Gender: g1, player2Gender: g2 }),
@@ -134,6 +140,14 @@ export const useGameStore = create<GameStore>()(
           : [...s.disabledPackIds, id],
       })),
 
+      addPrize: (text, collaborative, lang) => {
+        const id = `prize-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        set((s) => ({ customPrizes: [...s.customPrizes, { id, text, collaborative, lang }] }));
+      },
+      addPrizes: (prizes) => set((s) => ({ customPrizes: [...s.customPrizes, ...prizes] })),
+      removePrize: (id) => set((s) => ({ customPrizes: s.customPrizes.filter((p) => p.id !== id) })),
+      clearCustomPrizes: () => set({ customPrizes: [] }),
+
       startGame: () => {
         const { player1Name, player2Name, player1Gender, player2Gender, enabledLevels, customCards, packs: _p, disabledPackIds, gameRounds, language } = get();
         const filteredCustom = customCards.filter((c) =>
@@ -146,7 +160,7 @@ export const useGameStore = create<GameStore>()(
           players: [makePlayer(1, player1Name, player1Gender), makePlayer(2, player2Name, player2Gender)],
           enabledLevels, totalRounds: gameRounds,
         };
-        set({ gameState: { config, deck, discardPile: [], currentPlayerIndex: 0, currentCard: null, phase: 'choosing', turnNumber: 1, pendingForfeit: null, skipsRemaining: MAX_SKIPS, history: [] } });
+        set({ gameState: { config, deck, discardPile: [], currentPlayerIndex: 0, currentCard: null, phase: 'choosing', turnNumber: 1, pendingForfeit: null, skipsRemaining: [MAX_SKIPS, MAX_SKIPS], history: [] } });
       },
 
       selectCardType: (type) => {
@@ -185,10 +199,16 @@ export const useGameStore = create<GameStore>()(
       skipTurn: () => {
         const gs = get().gameState;
         if (!gs || gs.phase !== 'awaiting_done') return;
-        if (gs.skipsRemaining > 0) {
+        const playerSkips = gs.skipsRemaining[gs.currentPlayerIndex];
+        if (playerSkips > 0) {
           const entry = makeHistoryEntry(gs, 'skipped');
           const history = entry ? [...gs.history, entry] : gs.history;
-          set({ gameState: { ...gs, skipsRemaining: gs.skipsRemaining - 1, currentCard: null, phase: 'choosing', history } });
+          const newSkips: [number, number] = [...gs.skipsRemaining] as [number, number];
+          newSkips[gs.currentPlayerIndex] = playerSkips - 1;
+          const nextIndex: 0 | 1 = gs.currentPlayerIndex === 0 ? 1 : 0;
+          const nextTurn = gs.turnNumber + 1;
+          const gameOver = gs.config.totalRounds !== null && nextTurn > gs.config.totalRounds * 2;
+          set({ gameState: { ...gs, skipsRemaining: newSkips, currentPlayerIndex: nextIndex, currentCard: null, phase: gameOver ? 'game_over' : 'choosing', turnNumber: nextTurn, history } });
         } else {
           const players = [...gs.config.players] as [Player, Player];
           players[gs.currentPlayerIndex] = { ...players[gs.currentPlayerIndex], forfeitsOwed: players[gs.currentPlayerIndex].forfeitsOwed + 1 };
@@ -212,7 +232,19 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: 'ignite-store',
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
+      migrate: (persisted: any, version: number) => {
+        if (version < 2) {
+          if (persisted.gameState?.skipsRemaining !== undefined &&
+              typeof persisted.gameState.skipsRemaining === 'number') {
+            const n = persisted.gameState.skipsRemaining as number;
+            persisted.gameState.skipsRemaining = [n, n] as [number, number];
+          }
+          if (!persisted.customPrizes) persisted.customPrizes = [];
+        }
+        return persisted;
+      },
       partialize: (s) => ({
         player1Name:    s.player1Name,
         player2Name:    s.player2Name,
@@ -224,7 +256,8 @@ export const useGameStore = create<GameStore>()(
         disabledPackIds: s.disabledPackIds,
         gameRounds:     s.gameRounds,
         language:       s.language,
-        gameState:      s.gameState, // persists mid-game session
+        gameState:      s.gameState,
+        customPrizes:   s.customPrizes,
       }),
     }
   )

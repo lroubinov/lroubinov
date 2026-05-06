@@ -65,4 +65,21 @@ for (let i = 0; i < dareN; i++) {
 }
 fs.writeFileSync(path.join(out, 'dare.wav'), makeWav(dareSamples, 22050));
 
-console.log('Generated: click.wav, done.wav, dare.wav in assets/sounds/');
+// ding.wav — 3-note C-E-G chime for timer end
+const SR = 22050;
+const noteMs = 160;
+const noteN = Math.floor(SR * noteMs / 1000);
+const notes = [523, 659, 784]; // C5 E5 G5
+const dingTotal = noteN * notes.length;
+const dingSamples = new Int16Array(dingTotal);
+notes.forEach((freq, ni) => {
+  const off = ni * noteN;
+  for (let i = 0; i < noteN; i++) {
+    const t = i / SR;
+    const env = Math.exp(-t * 14);
+    dingSamples[off + i] = Math.round(0.52 * env * 32767 * Math.sin(2 * Math.PI * freq * t));
+  }
+});
+fs.writeFileSync(path.join(out, 'ding.wav'), makeWav(dingSamples, SR));
+
+console.log('Generated: click.wav, done.wav, dare.wav, ding.wav in assets/sounds/');
