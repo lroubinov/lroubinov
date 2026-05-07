@@ -26,6 +26,7 @@ interface SetupState {
   gameRounds: GameRounds;
   language: Lang;
   customPrizes: Prize[];
+  globalDareTimer: number; // 0 = disabled, 30/60/90 = seconds for all dares
 }
 
 interface GameStore extends SetupState {
@@ -43,6 +44,7 @@ interface GameStore extends SetupState {
   addPack: (name: string, emoji: string, lang: Lang) => string;
   removePack: (id: string) => void;
   togglePack: (id: string) => void;
+  setGlobalDareTimer: (seconds: number) => void;
   addPrize: (text: string, collaborative: boolean, lang: Lang) => void;
   addPrizes: (prizes: Prize[]) => void;
   removePrize: (id: string) => void;
@@ -107,13 +109,14 @@ export const useGameStore = create<GameStore>()(
       enabledLevels: ['hot'], customCards: [],
       packs: [], disabledPackIds: [],
       gameRounds: 10, language: 'en', gameState: null,
-      customPrizes: [],
+      customPrizes: [], globalDareTimer: 0,
 
       setPlayerNames:   (p1, p2) => set({ player1Name: p1, player2Name: p2 }),
       setPlayerGenders: (g1, g2) => set({ player1Gender: g1, player2Gender: g2 }),
       setEnabledLevels: (levels) => set({ enabledLevels: levels }),
-      setGameRounds:    (rounds) => set({ gameRounds: rounds }),
-      setLanguage:      (lang)   => set({ language: lang }),
+      setGameRounds:       (rounds)  => set({ gameRounds: rounds }),
+      setLanguage:         (lang)    => set({ language: lang }),
+      setGlobalDareTimer:  (seconds) => set({ globalDareTimer: seconds }),
 
       addCustomCard: (text, type, lang, timerSeconds, packId) => {
         const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -173,8 +176,16 @@ export const useGameStore = create<GameStore>()(
       onRevealComplete: () => {
         const gs = get().gameState;
         if (!gs || gs.phase !== 'revealing') return;
-        const nextPhase: GamePhase = gs.currentCard?.type === 'dare' && gs.currentCard?.timerSeconds ? 'timer_running' : 'awaiting_done';
-        set({ gameState: { ...gs, phase: nextPhase } });
+        const { globalDareTimer } = get();
+        const isDare = gs.currentCard?.type === 'dare';
+        // Effective timer: card-specific wins; if none, use global setting
+        const timerSecs = gs.currentCard?.timerSeconds ?? (isDare && globalDareTimer > 0 ? globalDareTimer : 0);
+        const nextPhase: GamePhase = isDare && timerSecs > 0 ? 'timer_running' : 'awaiting_done';
+        // Stamp the resolved timer onto currentCard so game.tsx can read it
+        const currentCard = gs.currentCard
+          ? { ...gs.currentCard, timerSeconds: timerSecs > 0 ? timerSecs : undefined }
+          : null;
+        set({ gameState: { ...gs, currentCard, phase: nextPhase } });
       },
 
       onTimerComplete: () => {
@@ -256,8 +267,9 @@ export const useGameStore = create<GameStore>()(
         disabledPackIds: s.disabledPackIds,
         gameRounds:     s.gameRounds,
         language:       s.language,
-        gameState:      s.gameState,
-        customPrizes:   s.customPrizes,
+        gameState:       s.gameState,
+        customPrizes:    s.customPrizes,
+        globalDareTimer: s.globalDareTimer,
       }),
     }
   )

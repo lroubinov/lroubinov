@@ -83,6 +83,9 @@ export default function GameScreen() {
   const [timerBonus, setTimerBonus]  = useState(0);
   const [timerKey, setTimerKey]      = useState(0);
 
+  // Track phase transitions to play ding reliably (avoids async race with re-renders)
+  const prevPhaseRef = useRef<string | undefined>(undefined);
+
   // Keep screen awake during gameplay
   useEffect(() => {
     activateKeepAwakeAsync('game');
@@ -90,10 +93,20 @@ export default function GameScreen() {
   }, []);
 
   useEffect(() => {
+    const prev = prevPhaseRef.current;
+    const cur  = gs?.phase;
+    prevPhaseRef.current = cur;
+
     if (!gs) { router.replace('/'); return; }
-    if (gs.phase === 'game_over') router.replace('/results');
-    if (gs.phase === 'forfeit')   router.push('/forfeit');
-    if (gs.phase === 'choosing') {
+    if (cur === 'game_over') { router.replace('/results'); return; }
+    if (cur === 'forfeit')   { router.push('/forfeit'); return; }
+
+    // Play ding when timer_running → awaiting_done (natural end OR skip)
+    if (prev === 'timer_running' && cur === 'awaiting_done') {
+      Sounds.playDing();
+    }
+
+    if (cur === 'choosing') {
       cardRef.current?.reset();
       todExit.setValue(1);
       setIsExiting(false);
@@ -122,10 +135,8 @@ export default function GameScreen() {
     });
   };
 
-  const handleTimerComplete = () => {
-    Sounds.playDing();
-    onTimerComplete();
-  };
+  // Ding plays via phase-change effect (timer_running → awaiting_done)
+  const handleTimerComplete = () => { onTimerComplete(); };
 
   const baseTimerSeconds = gs.currentCard?.timerSeconds ?? 30;
   const effectiveTimer   = Math.max(5, baseTimerSeconds + timerBonus);

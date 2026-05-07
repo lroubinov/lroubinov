@@ -37,9 +37,11 @@ const translations: Record<Lang, Record<string, string>> = {
     clearAll: 'Delete All', deleteSelected: 'Delete Selected',
     selectMode: 'Select', cancelSelect: 'Cancel',
     // Timer
-    timerLabel: 'Timer', timerNone: 'None',
+    timerLabel: 'Card Timer Override', timerNone: 'None',
     timerAdd: '+15s', timerSub: '−15s',
     loadDefaultPrizes: '📥 Load built-in prizes',
+    globalTimerSection: '⏱  Default Dare Timer',
+    globalTimerDesc: 'Applied to every dare card during the game',
     // Packs
     packsSection: 'Question Packs',
     packNamePlaceholder: 'Pack name...',
@@ -110,9 +112,11 @@ const translations: Record<Lang, Record<string, string>> = {
     clearAll: 'מחק הכל', deleteSelected: 'מחק נבחרים',
     selectMode: 'בחר', cancelSelect: 'ביטול',
     // Timer
-    timerLabel: 'טיימר', timerNone: 'ללא',
+    timerLabel: 'טיימר לכרטיס ספציפי', timerNone: 'ללא',
     timerAdd: '+15s', timerSub: '−15s',
     loadDefaultPrizes: '📥 טען פרסים מובנים',
+    globalTimerSection: '⏱  טיימר ברירת מחדל לחובה',
+    globalTimerDesc: 'חל על כל כרטיסי החובה במהלך המשחק',
     // Packs
     packsSection: 'חבילות שאלות',
     packNamePlaceholder: 'שם החבילה...',

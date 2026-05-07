@@ -141,6 +141,7 @@ const tp = StyleSheet.create({
 export default function SettingsScreen() {
   const {
     language, setLanguage, gameRounds, setGameRounds,
+    globalDareTimer, setGlobalDareTimer,
     customCards, addCustomCard, removeCustomCard, removeCustomCards, addCustomCards, clearCustomCards,
     packs, addPack, removePack, togglePack, disabledPackIds,
     customPrizes, addPrize, addPrizes, removePrize, clearCustomPrizes,
@@ -270,6 +271,13 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionLabel, isRtl && styles.rtl]}>{t('durationSection')}</Text>
         <View style={styles.spinnerWrap}>
           <RoundSpinner value={gameRounds} onChange={setGameRounds} unlimitedLabel={t('unlimitedLabel')} />
+        </View>
+
+        {/* ── Global Dare Timer ── */}
+        <Text style={[styles.sectionLabel, isRtl && styles.rtl]}>{t('globalTimerSection')}</Text>
+        <Text style={[styles.globalTimerDesc, isRtl && styles.rtl]}>{t('globalTimerDesc')}</Text>
+        <View style={styles.spinnerWrap}>
+          <TimerPicker value={globalDareTimer} onChange={setGlobalDareTimer} noneLabel={t('timerNone')} />
         </View>
 
         {/* ── Packs ── */}
@@ -616,6 +624,7 @@ const styles = StyleSheet.create({
   heading: { color: Colors.brand.gold, fontSize: 26, fontWeight: '900', marginBottom: 8 },
   rtl: { textAlign: 'right', writingDirection: 'rtl' },
   sectionLabel: { color: Colors.text.muted, fontSize: 11, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6, marginTop: 8 },
+  globalTimerDesc: { color: Colors.text.muted, fontSize: 12, marginBottom: 10, opacity: 0.7 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 18, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginTop: 8 },
   chevron: { color: Colors.text.muted, fontSize: 12 },
   langRow: { flexDirection: 'row', gap: 12 },

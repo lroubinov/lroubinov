@@ -201,7 +201,7 @@ export default function HomeScreen() {
 
 const s = StyleSheet.create({
   kav: { flex: 1 },
-  scroll: { paddingHorizontal: 20, paddingTop: 28, paddingBottom: 20, gap: 8 },
+  scroll: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20, gap: 8 },
   orb: { position: 'absolute', borderRadius: 999 },
 
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
