@@ -22,49 +22,62 @@ import { useGameStore } from '../src/store/gameStore';
 interface TODCardProps {
   type: 'truth' | 'dare';
   label: string;
-  emoji: string;
+  subtitle: string;
   onPress: () => void;
   exitAnim: Animated.Value;
 }
 
-function TODCard({ type, label, emoji, onPress, exitAnim }: TODCardProps) {
+function TODCard({ type, label, subtitle, onPress, exitAnim }: TODCardProps) {
   const pulse   = useRef(new Animated.Value(1)).current;
-  const shimmer = useRef(new Animated.Value(-200)).current;
+  const glow    = useRef(new Animated.Value(0.4)).current;
+  const shimmer = useRef(new Animated.Value(-220)).current;
 
   useEffect(() => {
     Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1.05, duration: 1200, useNativeDriver: true }),
-      Animated.timing(pulse, { toValue: 1,    duration: 1200, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1.04, duration: 1400, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1,    duration: 1400, useNativeDriver: true }),
     ])).start();
-    if (type === 'dare') {
-      Animated.loop(Animated.sequence([
-        Animated.timing(shimmer, { toValue: 300, duration: 2200, useNativeDriver: true }),
-        Animated.delay(1800),
-        Animated.timing(shimmer, { toValue: -200, duration: 0, useNativeDriver: true }),
-      ])).start();
-    }
+    Animated.loop(Animated.sequence([
+      Animated.timing(glow, { toValue: 1,   duration: 1600, useNativeDriver: true }),
+      Animated.timing(glow, { toValue: 0.4, duration: 1600, useNativeDriver: true }),
+    ])).start();
+    Animated.loop(Animated.sequence([
+      Animated.timing(shimmer, { toValue: 260, duration: 2400, useNativeDriver: true }),
+      Animated.delay(2000),
+      Animated.timing(shimmer, { toValue: -220, duration: 0, useNativeDriver: true }),
+    ])).start();
   }, []);
 
   const isTruth = type === 'truth';
   const accent  = isTruth ? Colors.brand.neonBlue : Colors.brand.neonPink;
-  const bgGrad: [string, string] = isTruth
-    ? ['rgba(61,214,245,0.10)', 'rgba(30,100,150,0.06)']
-    : ['rgba(255,79,163,0.14)', 'rgba(180,0,80,0.07)'];
+  const icon    = isTruth ? '😇' : '😈';
+  const bgTop   = isTruth ? 'rgba(61,214,245,0.18)' : 'rgba(255,79,163,0.20)';
+  const bgBot   = isTruth ? 'rgba(20,60,100,0.08)'  : 'rgba(120,0,60,0.08)';
 
   return (
     <Animated.View style={[tod.wrap, { transform: [{ scale: Animated.multiply(exitAnim, pulse) }], opacity: exitAnim }]}>
+      {/* Outer glow ring */}
+      <Animated.View style={[tod.glowRing, { borderColor: accent, opacity: glow }]} />
+
       <TouchableOpacity
         onPress={() => { isTruth ? Sounds.playClick() : Sounds.playDare(); onPress(); }}
         activeOpacity={0.88}
         style={tod.touchable}
       >
-        <LinearGradient colors={bgGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[tod.card, { borderColor: accent + '55' }]}>
-          <View style={[tod.strip, { backgroundColor: accent }]} />
-          {!isTruth && (
-            <Animated.View style={[tod.shimmer, { transform: [{ translateX: shimmer }, { skewX: '-15deg' }] }]} />
-          )}
-          <Text style={tod.emoji}>{emoji}</Text>
+        <LinearGradient
+          colors={[bgTop, bgBot]}
+          start={{ x: 0, y: 0 }} end={{ x: 0.6, y: 1 }}
+          style={[tod.card, { borderColor: accent + '70' }]}
+        >
+          {/* Glass shine */}
+          <View style={tod.shine} />
+          {/* Shimmer sweep */}
+          <Animated.View style={[tod.shimmer, { transform: [{ translateX: shimmer }, { skewX: '-20deg' }] }]} />
+
+          <Text style={tod.icon}>{icon}</Text>
           <Text style={[tod.label, { color: accent, fontFamily: 'BebasNeue_400Regular' }]}>{label}</Text>
+          <View style={[tod.divider, { backgroundColor: accent + '55' }]} />
+          <Text style={[tod.sub, { color: accent + 'AA' }]}>{subtitle}</Text>
         </LinearGradient>
       </TouchableOpacity>
     </Animated.View>
@@ -295,14 +308,14 @@ export default function GameScreen() {
             {/* TOD choosing + swipe */}
             {isChoosing && (
               <View style={s.todOuter} {...swipePan.panHandlers}>
-                <View style={s.swipeHintRow}>
-                  <Text style={[s.swipeHint, { color: Colors.brand.neonBlue }]}>{t('swipeHintTruth')}</Text>
-                  <Text style={s.swipeHintMid}>{t('swipeHint')}</Text>
-                  <Text style={[s.swipeHint, { color: Colors.brand.neonPink }]}>{t('swipeHintDare')}</Text>
-                </View>
                 <View style={s.todGrid}>
-                  <TODCard type="truth" label={t('truth')} emoji="💬" onPress={() => handleTypeSelect('truth')} exitAnim={todExit} />
-                  <TODCard type="dare"  label={t('dare')}  emoji="🔥" onPress={() => handleTypeSelect('dare')}  exitAnim={todExit} />
+                  <TODCard type="truth" label={t('truth')} subtitle={language === 'he' ? 'ספר/י את האמת' : 'Confess it all'} onPress={() => handleTypeSelect('truth')} exitAnim={todExit} />
+                  <TODCard type="dare"  label={t('dare')}  subtitle={language === 'he' ? 'אם תעיז...' : 'If you dare...'} onPress={() => handleTypeSelect('dare')}  exitAnim={todExit} />
+                </View>
+                <View style={s.swipeHintRow}>
+                  <Text style={[s.swipeHint, { color: Colors.brand.neonBlue }]}>{'← ' + t('truth')}</Text>
+                  <Text style={s.swipeHintMid}>{t('swipeHint')}</Text>
+                  <Text style={[s.swipeHint, { color: Colors.brand.neonPink }]}>{t('dare') + ' →'}</Text>
                 </View>
               </View>
             )}
@@ -377,10 +390,10 @@ const s = StyleSheet.create({
 
   main: { flex: 1, gap: 10 },
 
-  todOuter: { flex: 1, justifyContent: 'center', gap: 12 },
-  swipeHintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  swipeHint: { fontSize: 11, fontWeight: '800', letterSpacing: 1, opacity: 0.7 },
-  swipeHintMid: { color: Colors.text.muted, fontSize: 10, fontWeight: '600' },
+  todOuter: { flex: 1, justifyContent: 'center', gap: 14 },
+  swipeHintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 4 },
+  swipeHint: { fontSize: 13, fontWeight: '800', letterSpacing: 1.5, opacity: 0.65 },
+  swipeHintMid: { color: Colors.text.muted, fontSize: 11, fontWeight: '600', opacity: 0.5 },
   todGrid: { flexDirection: 'row', gap: 14 },
 
   timerBlock: { alignItems: 'center', gap: 10, paddingTop: 8 },
@@ -397,14 +410,25 @@ const s = StyleSheet.create({
 });
 
 const tod = StyleSheet.create({
-  wrap: { flex: 1 },
-  touchable: { borderRadius: 22, overflow: 'hidden', flex: 1 },
+  wrap: { flex: 1, position: 'relative' },
+  glowRing: {
+    position: 'absolute', inset: -6, borderRadius: 28,
+    borderWidth: 2, zIndex: 0,
+  } as any,
+  touchable: { borderRadius: 22, overflow: 'hidden', flex: 1, zIndex: 1 },
   card: {
-    borderRadius: 22, borderWidth: 1.5, paddingVertical: 44, paddingHorizontal: 12,
-    alignItems: 'center', gap: 12, overflow: 'hidden', position: 'relative', flex: 1,
+    borderRadius: 22, borderWidth: 1.5,
+    paddingTop: 32, paddingBottom: 28, paddingHorizontal: 12,
+    alignItems: 'center', gap: 8, overflow: 'hidden', position: 'relative', flex: 1,
   },
-  strip:   { position: 'absolute', top: 0, bottom: 0, left: 0, width: 3, opacity: 0.8 },
-  shimmer: { position: 'absolute', top: 0, bottom: 0, width: 50, backgroundColor: 'rgba(255,255,255,0.07)' },
-  emoji:   { fontSize: 38 },
-  label:   { fontSize: 28, letterSpacing: 4, lineHeight: 32 },
+  shine: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: '40%',
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    borderTopLeftRadius: 22, borderTopRightRadius: 22,
+  },
+  shimmer: { position: 'absolute', top: 0, bottom: 0, width: 60, backgroundColor: 'rgba(255,255,255,0.06)' },
+  icon:    { fontSize: 46, marginBottom: 4 },
+  label:   { fontSize: 32, letterSpacing: 4, lineHeight: 36 },
+  divider: { width: '50%', height: 1, marginVertical: 4 },
+  sub:     { fontSize: 11, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' },
 });

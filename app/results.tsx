@@ -171,6 +171,10 @@ export default function ResultsScreen() {
   const btnScale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    Sounds.playConfetti();
+  }, []);
+
+  useEffect(() => {
     Animated.sequence([
       Animated.delay(200),
       Animated.parallel([

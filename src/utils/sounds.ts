@@ -48,4 +48,10 @@ export const Sounds = {
     if (!spin) return;
     try { await spin.stopAsync(); } catch {}
   },
+  playConfetti: () => {
+    // Play ding three times with short delays for a celebratory pop sound
+    play(ding);
+    setTimeout(() => play(ding), 180);
+    setTimeout(() => play(ding), 360);
+  },
 };

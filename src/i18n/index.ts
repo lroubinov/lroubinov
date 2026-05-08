@@ -78,6 +78,12 @@ const translations: Record<Lang, Record<string, string>> = {
     getPrize: '🎡 Spin for a Prize!',
     getPrizeDraw: '🎡 Spin for a Shared Prize!',
     swipeHintTruth: '← TRUTH', swipeHintDare: 'DARE →', swipeHint: 'or swipe',
+    // Themes
+    themeSection: '🎨  Theme',
+    themeNeon: 'Neon Night',
+    themePurple: 'Deep Purple',
+    themeCrimson: 'Crimson Fire',
+    themeOcean: 'Ocean Blue',
   },
   he: {
     tagline: 'הלילה שלכם. החוקים שלכם.',
@@ -156,6 +162,12 @@ const translations: Record<Lang, Record<string, string>> = {
     getPrize: '🎡 סובב/י לקבלת פרס!',
     getPrizeDraw: '🎡 סובבו לקבלת פרס משותף!',
     swipeHintTruth: 'אמת ←', swipeHintDare: '→ חובה', swipeHint: 'או החלק/י',
+    // Themes
+    themeSection: '🎨  ערכת נושא',
+    themeNeon: 'ניאון לילי',
+    themePurple: 'סגול עמוק',
+    themeCrimson: 'אש ארגמן',
+    themeOcean: 'כחול ים',
   },
 };
 

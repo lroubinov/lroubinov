@@ -6,6 +6,7 @@ import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View
 import GlowButton from '../src/components/ui/GlowButton';
 import GradientBackground from '../src/components/ui/GradientBackground';
 import { Colors } from '../src/constants/colors';
+import { Theme, THEMES } from '../src/constants/themes';
 import { CardType, Prize } from '../src/data/types';
 import { defaultPrizes } from '../src/data/prizes';
 import { Lang, tr } from '../src/i18n';
@@ -140,7 +141,7 @@ const tp = StyleSheet.create({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function SettingsScreen() {
   const {
-    language, setLanguage, gameRounds, setGameRounds,
+    language, setLanguage, theme, setTheme, gameRounds, setGameRounds,
     globalDareTimer, setGlobalDareTimer,
     customCards, addCustomCard, removeCustomCard, removeCustomCards, addCustomCards, clearCustomCards,
     packs, addPack, removePack, togglePack, disabledPackIds,
@@ -265,6 +266,29 @@ export default function SettingsScreen() {
               <Text style={[styles.langBtnText, language===lang && styles.langBtnTextActive]}>{lang==='en' ? '🇺🇸  English' : '🇮🇱  עברית'}</Text>
             </TouchableOpacity>
           ))}
+        </View>
+
+        {/* ── Theme ── */}
+        <Text style={[styles.sectionLabel, isRtl && styles.rtl]}>{t('themeSection')}</Text>
+        <View style={styles.themeGrid}>
+          {(Object.keys(THEMES) as Theme[]).map(key => {
+            const th = THEMES[key];
+            const active = theme === key;
+            return (
+              <TouchableOpacity
+                key={key}
+                style={[styles.themeBtn, active && { borderColor: th.primary, backgroundColor: th.primary + '22' }]}
+                onPress={() => setTheme(key)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.themeEmoji}>{th.emoji}</Text>
+                <Text style={[styles.themeName, active && { color: th.primary }]}>
+                  {language === 'he' ? th.nameHe : th.name}
+                </Text>
+                {active && <View style={[styles.themeCheck, { backgroundColor: th.primary }]}><Text style={styles.themeCheckText}>✓</Text></View>}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* ── Duration ── */}
@@ -688,4 +712,16 @@ const styles = StyleSheet.create({
   prizeText: { flex: 1, color: Colors.text.secondary, fontSize: 13, lineHeight: 18 },
   loadDefaultsBtn: { paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.brand.gold + '60', alignItems: 'center', backgroundColor: 'rgba(244,197,66,0.08)' },
   loadDefaultsText: { color: Colors.brand.gold, fontSize: 14, fontWeight: '700', letterSpacing: 0.5 },
+  // Themes
+  themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  themeBtn: {
+    width: '47%', paddingVertical: 14, paddingHorizontal: 12, borderRadius: 14,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    alignItems: 'center', gap: 4, position: 'relative',
+  },
+  themeEmoji: { fontSize: 26 },
+  themeName: { color: Colors.text.muted, fontSize: 12, fontWeight: '700', letterSpacing: 0.5, textAlign: 'center' },
+  themeCheck: { position: 'absolute', top: 6, right: 8, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  themeCheckText: { color: '#fff', fontSize: 10, fontWeight: '900' },
 });

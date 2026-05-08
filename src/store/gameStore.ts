@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { Lang } from '../i18n';
+import { Theme } from '../constants/themes';
 import {
   Card, CardType, ForfeitCard, GameConfig, GamePhase, GameRounds,
   GameState, HistoryEntry, Pack, Player, Prize, SpiceLevel,
@@ -25,6 +26,7 @@ interface SetupState {
   disabledPackIds: string[];
   gameRounds: GameRounds;
   language: Lang;
+  theme: Theme;
   customPrizes: Prize[];
   globalDareTimer: number; // 0 = disabled, 30/60/90 = seconds for all dares
 }
@@ -36,6 +38,7 @@ interface GameStore extends SetupState {
   setEnabledLevels: (levels: SpiceLevel[]) => void;
   setGameRounds: (rounds: GameRounds) => void;
   setLanguage: (lang: Lang) => void;
+  setTheme: (theme: Theme) => void;
   addCustomCard: (text: string, type: CardType, lang: Lang, timerSeconds?: number, packId?: string) => void;
   removeCustomCard: (id: string) => void;
   removeCustomCards: (ids: string[]) => void;
@@ -108,7 +111,7 @@ export const useGameStore = create<GameStore>()(
       player1Gender: 'M', player2Gender: 'F',
       enabledLevels: ['hot'], customCards: [],
       packs: [], disabledPackIds: [],
-      gameRounds: 10, language: 'en', gameState: null,
+      gameRounds: 10, language: 'en', theme: 'neon', gameState: null,
       customPrizes: [], globalDareTimer: 0,
 
       setPlayerNames:   (p1, p2) => set({ player1Name: p1, player2Name: p2 }),
@@ -116,6 +119,7 @@ export const useGameStore = create<GameStore>()(
       setEnabledLevels: (levels) => set({ enabledLevels: levels }),
       setGameRounds:       (rounds)  => set({ gameRounds: rounds }),
       setLanguage:         (lang)    => set({ language: lang }),
+      setTheme:            (theme)   => set({ theme }),
       setGlobalDareTimer:  (seconds) => set({ globalDareTimer: seconds }),
 
       addCustomCard: (text, type, lang, timerSeconds, packId) => {
