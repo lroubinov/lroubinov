@@ -2,7 +2,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Animated, PanResponder, SafeAreaView, StyleSheet,
+  Text, TouchableOpacity, View,
+} from 'react-native';
 import ActionButtons from '../src/components/game/ActionButtons';
 import CardReveal from '../src/components/game/CardReveal';
 import CountdownTimer from '../src/components/game/CountdownTimer';
@@ -14,7 +17,8 @@ import { tr } from '../src/i18n';
 import { Sounds } from '../src/utils/sounds';
 import { useGameStore } from '../src/store/gameStore';
 
-// Truth or Dare selection card with exit animation
+// ─── TOD choice card ─────────────────────────────────────────────────────────
+
 interface TODCardProps {
   type: 'truth' | 'dare';
   label: string;
@@ -29,8 +33,8 @@ function TODCard({ type, label, emoji, onPress, exitAnim }: TODCardProps) {
 
   useEffect(() => {
     Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1.04, duration: 1100, useNativeDriver: true }),
-      Animated.timing(pulse, { toValue: 1,    duration: 1100, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1.05, duration: 1200, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1,    duration: 1200, useNativeDriver: true }),
     ])).start();
     if (type === 'dare') {
       Animated.loop(Animated.sequence([
@@ -42,29 +46,50 @@ function TODCard({ type, label, emoji, onPress, exitAnim }: TODCardProps) {
   }, []);
 
   const isTruth = type === 'truth';
-  const accent  = isTruth ? Colors.brand.neonBlue : Colors.brand.fire;
-  const bgColor = isTruth ? 'rgba(61,214,245,0.08)' : 'rgba(255,69,0,0.12)';
+  const accent  = isTruth ? Colors.brand.neonBlue : Colors.brand.neonPink;
+  const bgGrad: [string, string] = isTruth
+    ? ['rgba(61,214,245,0.10)', 'rgba(30,100,150,0.06)']
+    : ['rgba(255,79,163,0.14)', 'rgba(180,0,80,0.07)'];
 
   return (
     <Animated.View style={[tod.wrap, { transform: [{ scale: Animated.multiply(exitAnim, pulse) }], opacity: exitAnim }]}>
       <TouchableOpacity
-        onPress={() => {
-          type === 'dare' ? Sounds.playDare() : Sounds.playClick();
-          onPress();
-        }}
-        activeOpacity={0.9}
-        style={[tod.card, { backgroundColor: bgColor, borderColor: accent }]}
+        onPress={() => { isTruth ? Sounds.playClick() : Sounds.playDare(); onPress(); }}
+        activeOpacity={0.88}
+        style={tod.touchable}
       >
-        <View style={[tod.strip, { backgroundColor: accent }]} />
-        {!isTruth && (
-          <Animated.View style={[tod.shimmer, { transform: [{ translateX: shimmer }, { skewX: '-15deg' }] }]} />
-        )}
-        <Text style={tod.emoji}>{emoji}</Text>
-        <Text style={[tod.label, { color: accent, fontFamily: 'BebasNeue_400Regular' }]}>{label}</Text>
+        <LinearGradient colors={bgGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[tod.card, { borderColor: accent + '55' }]}>
+          <View style={[tod.strip, { backgroundColor: accent }]} />
+          {!isTruth && (
+            <Animated.View style={[tod.shimmer, { transform: [{ translateX: shimmer }, { skewX: '-15deg' }] }]} />
+          )}
+          <Text style={tod.emoji}>{emoji}</Text>
+          <Text style={[tod.label, { color: accent, fontFamily: 'BebasNeue_400Regular' }]}>{label}</Text>
+        </LinearGradient>
       </TouchableOpacity>
     </Animated.View>
   );
 }
+
+// ─── Floating emoji reaction ──────────────────────────────────────────────────
+
+interface ReactionProps { emoji: string; y: Animated.Value; opacity: Animated.Value; }
+function EmojiReaction({ emoji, y, opacity }: ReactionProps) {
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        StyleSheet.absoluteFillObject,
+        { justifyContent: 'center', alignItems: 'center', zIndex: 99 },
+        { transform: [{ translateY: y }], opacity },
+      ]}
+    >
+      <Text style={{ fontSize: 72 }}>{emoji}</Text>
+    </Animated.View>
+  );
+}
+
+// ─── Main game screen ─────────────────────────────────────────────────────────
 
 export default function GameScreen() {
   const {
@@ -75,18 +100,19 @@ export default function GameScreen() {
   const cardRef = useRef<AnimatedCardRef>(null);
   const gs = gameState;
 
-  // Exit animation for TOD cards
-  const todExit  = useRef(new Animated.Value(1)).current;
+  const todExit   = useRef(new Animated.Value(1)).current;
   const [isExiting, setIsExiting] = useState(false);
 
-  // Timer adjustment: tracked per card, reset each turn
-  const [timerBonus, setTimerBonus]  = useState(0);
-  const [timerKey, setTimerKey]      = useState(0);
+  const [timerBonus, setTimerBonus] = useState(0);
+  const [timerKey,   setTimerKey]   = useState(0);
 
-  // Track phase transitions to play ding reliably (avoids async race with re-renders)
+  // Emoji reaction
+  const [reactionEmoji,   setReactionEmoji]   = useState<string | null>(null);
+  const reactionY       = useRef(new Animated.Value(0)).current;
+  const reactionOpacity = useRef(new Animated.Value(0)).current;
+
   const prevPhaseRef = useRef<string | undefined>(undefined);
 
-  // Keep screen awake during gameplay
   useEffect(() => {
     activateKeepAwakeAsync('game');
     return () => { deactivateKeepAwake('game'); };
@@ -101,7 +127,6 @@ export default function GameScreen() {
     if (cur === 'game_over') { router.replace('/results'); return; }
     if (cur === 'forfeit')   { router.push('/forfeit'); return; }
 
-    // Play ding when timer_running → awaiting_done (natural end OR skip)
     if (prev === 'timer_running' && cur === 'awaiting_done') {
       Sounds.playDing();
     }
@@ -135,7 +160,20 @@ export default function GameScreen() {
     });
   };
 
-  // Ding plays via phase-change effect (timer_running → awaiting_done)
+  // Swipe gesture on the TOD choosing area
+  const swipePan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 12 && Math.abs(g.dy) < 60,
+      onPanResponderRelease: (_, g) => {
+        if (Math.abs(g.dx) > 55) {
+          if (g.dx > 0) handleTypeSelect('dare');
+          else          handleTypeSelect('truth');
+        }
+      },
+    })
+  ).current;
+
   const handleTimerComplete = () => { onTimerComplete(); };
 
   const baseTimerSeconds = gs.currentCard?.timerSeconds ?? 30;
@@ -144,12 +182,32 @@ export default function GameScreen() {
   const adjustTimer = (delta: number) => {
     const next = Math.max(5, effectiveTimer + delta);
     setTimerBonus(next - baseTimerSeconds);
-    setTimerKey(k => k + 1); // remount CountdownTimer with new duration
+    setTimerKey(k => k + 1);
+  };
+
+  const triggerReaction = (emoji: string, cb: () => void) => {
+    setReactionEmoji(emoji);
+    reactionY.setValue(0);
+    reactionOpacity.setValue(1);
+    Animated.parallel([
+      Animated.timing(reactionY, { toValue: -110, duration: 950, useNativeDriver: true }),
+      Animated.sequence([
+        Animated.delay(380),
+        Animated.timing(reactionOpacity, { toValue: 0, duration: 570, useNativeDriver: true }),
+      ]),
+    ]).start(() => { setReactionEmoji(null); cb(); });
+  };
+
+  const handleDone = () => {
+    Sounds.playDone();
+    const emoji = gs.currentCard?.type === 'dare' ? '💋' : '✨';
+    triggerReaction(emoji, completeTurn);
   };
 
   const isChoosing = gs.phase === 'choosing';
-  const p1Skips = gs.skipsRemaining[0];
-  const p2Skips = gs.skipsRemaining[1];
+  const p1Skips   = gs.skipsRemaining[0];
+  const p2Skips   = gs.skipsRemaining[1];
+  const heartsFor = (n: number) => n === 0 ? '—' : '♡'.repeat(Math.max(0, n));
 
   return (
     <GradientBackground colors={Colors.gradient.splash}>
@@ -160,13 +218,15 @@ export default function GameScreen() {
           {/* ── HUD ── */}
           <View style={s.hud}>
             <View style={s.hudPlayer}>
-              <Text style={[s.hudName, { color: Colors.brand.neonBlue }, gs.currentPlayerIndex === 0 && s.hudNameActive]} numberOfLines={1}>
+              <Text style={[s.hudName, gs.currentPlayerIndex === 0 && { color: Colors.brand.neonBlue }]} numberOfLines={1}>
                 {gs.config.players[0].name}
               </Text>
               <Text style={[s.hudScore, gs.currentPlayerIndex === 0 && { color: Colors.brand.gold }]}>
                 {gs.config.players[0].score}
               </Text>
-              <Text style={s.hudSkips}>{'⚡'.repeat(Math.max(0, p1Skips))}{p1Skips === 0 ? '—' : ''}</Text>
+              <Text style={[s.hudHearts, { color: p1Skips > 0 ? Colors.brand.neonPink : Colors.text.muted }]}>
+                {heartsFor(p1Skips)}
+              </Text>
             </View>
 
             <View style={s.hudCenter}>
@@ -178,20 +238,22 @@ export default function GameScreen() {
             </View>
 
             <View style={[s.hudPlayer, s.hudRight]}>
-              <Text style={[s.hudName, { color: Colors.brand.neonPink }, gs.currentPlayerIndex === 1 && s.hudNameActive]} numberOfLines={1}>
+              <Text style={[s.hudName, gs.currentPlayerIndex === 1 && { color: Colors.brand.neonPink }]} numberOfLines={1}>
                 {gs.config.players[1].name}
               </Text>
               <Text style={[s.hudScore, gs.currentPlayerIndex === 1 && { color: Colors.brand.gold }]}>
                 {gs.config.players[1].score}
               </Text>
-              <Text style={[s.hudSkips, { textAlign: 'right' }]}>{'⚡'.repeat(Math.max(0, p2Skips))}{p2Skips === 0 ? '—' : ''}</Text>
+              <Text style={[s.hudHearts, { color: p2Skips > 0 ? Colors.brand.neonPink : Colors.text.muted, textAlign: 'right' }]}>
+                {heartsFor(p2Skips)}
+              </Text>
             </View>
           </View>
 
           {/* ── Turn chip ── */}
           <View style={s.chipOuter}>
             <LinearGradient
-              colors={[Colors.brand.neonBlue, Colors.brand.neonPink]}
+              colors={[Colors.brand.neonPink, Colors.brand.neonBlue]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={s.chipGradient}
             >
@@ -202,19 +264,19 @@ export default function GameScreen() {
             </LinearGradient>
           </View>
 
-          {/* ── Spark divider ── */}
-          <View style={s.sparkWrap}>
+          {/* ── Divider ── */}
+          <View style={s.dividerWrap}>
             <LinearGradient
-              colors={['transparent', Colors.brand.fireHot, Colors.brand.gold, Colors.brand.fireHot, 'transparent']}
+              colors={['transparent', Colors.brand.neonPink + '60', Colors.brand.gold + '70', Colors.brand.neonPink + '60', 'transparent']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={s.sparkLine}
+              style={s.divider}
             />
           </View>
 
           {/* ── Main content ── */}
           <View style={s.main}>
 
-            {/* AnimatedCard */}
+            {/* AnimatedCard (hidden during choosing) */}
             <View style={{ display: isChoosing ? 'none' : 'flex', flex: isChoosing ? 0 : 1 }}>
               <AnimatedCard
                 ref={cardRef}
@@ -230,9 +292,14 @@ export default function GameScreen() {
               />
             </View>
 
-            {/* Choosing: Truth / Dare cards */}
+            {/* TOD choosing + swipe */}
             {isChoosing && (
-              <View style={s.todWrap}>
+              <View style={s.todOuter} {...swipePan.panHandlers}>
+                <View style={s.swipeHintRow}>
+                  <Text style={[s.swipeHint, { color: Colors.brand.neonBlue }]}>{t('swipeHintTruth')}</Text>
+                  <Text style={s.swipeHintMid}>{t('swipeHint')}</Text>
+                  <Text style={[s.swipeHint, { color: Colors.brand.neonPink }]}>{t('swipeHintDare')}</Text>
+                </View>
                 <View style={s.todGrid}>
                   <TODCard type="truth" label={t('truth')} emoji="💬" onPress={() => handleTypeSelect('truth')} exitAnim={todExit} />
                   <TODCard type="dare"  label={t('dare')}  emoji="🔥" onPress={() => handleTypeSelect('dare')}  exitAnim={todExit} />
@@ -240,31 +307,18 @@ export default function GameScreen() {
               </View>
             )}
 
-            {/* Timer with adjustment buttons */}
+            {/* Timer with adjustment */}
             {gs.phase === 'timer_running' && (
               <View style={s.timerBlock}>
                 <View style={s.timerRow}>
-                  <TouchableOpacity
-                    style={s.timerAdj}
-                    onPress={() => { Sounds.playClick(); adjustTimer(-15); }}
-                  >
+                  <TouchableOpacity style={s.timerAdj} onPress={() => { Sounds.playClick(); adjustTimer(-15); }}>
                     <Text style={s.timerAdjText}>{t('timerSub')}</Text>
                   </TouchableOpacity>
-
-                  <CountdownTimer
-                    key={timerKey}
-                    seconds={effectiveTimer}
-                    onComplete={handleTimerComplete}
-                  />
-
-                  <TouchableOpacity
-                    style={[s.timerAdj, s.timerAdjAdd]}
-                    onPress={() => { Sounds.playClick(); adjustTimer(+15); }}
-                  >
+                  <CountdownTimer key={timerKey} seconds={effectiveTimer} onComplete={handleTimerComplete} />
+                  <TouchableOpacity style={[s.timerAdj, s.timerAdjAdd]} onPress={() => { Sounds.playClick(); adjustTimer(+15); }}>
                     <Text style={[s.timerAdjText, { color: '#6FCF4A' }]}>{t('timerAdd')}</Text>
                   </TouchableOpacity>
                 </View>
-
                 <TouchableOpacity style={s.skipTimer} onPress={() => { Sounds.playClick(); handleTimerComplete(); }}>
                   <Text style={s.skipTimerText}>{t('skipTimer')}</Text>
                 </TouchableOpacity>
@@ -275,7 +329,7 @@ export default function GameScreen() {
           {/* ── Done / Skip ── */}
           {gs.phase === 'awaiting_done' && (
             <ActionButtons
-              onDone={() => { Sounds.playDone(); completeTurn(); }}
+              onDone={handleDone}
               onSkip={skipTurn}
               skipsRemaining={gs.skipsRemaining[gs.currentPlayerIndex]}
               doneLabel={t('done')}
@@ -287,6 +341,11 @@ export default function GameScreen() {
 
         </View>
       </SafeAreaView>
+
+      {/* Floating emoji reaction */}
+      {reactionEmoji && (
+        <EmojiReaction emoji={reactionEmoji} y={reactionY} opacity={reactionOpacity} />
+      )}
     </GradientBackground>
   );
 }
@@ -299,14 +358,13 @@ const s = StyleSheet.create({
   hudPlayer: { flex: 1, alignItems: 'flex-start' },
   hudRight:  { alignItems: 'flex-end' },
   hudName: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5, color: Colors.text.muted, maxWidth: 100 },
-  hudNameActive: { color: Colors.text.primary },
   hudScore: { fontSize: 28, fontWeight: '900', color: Colors.text.muted, lineHeight: 32 },
-  hudSkips: { fontSize: 10, color: Colors.brand.fire, marginTop: 2, letterSpacing: 1 },
+  hudHearts: { fontSize: 12, marginTop: 2, letterSpacing: 2 },
   hudCenter: { alignItems: 'center', gap: 2, paddingHorizontal: 8 },
   hudRoundLabel: { color: Colors.text.muted, fontSize: 8, fontWeight: '700', letterSpacing: 2 },
   hudRound: { color: Colors.brand.gold, fontSize: 15, fontWeight: '900', lineHeight: 18 },
-  endBtn: { marginTop: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, borderWidth: 1, borderColor: Colors.brand.crimson + '55' },
-  endBtnText: { color: Colors.brand.crimson, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
+  endBtn: { marginTop: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, borderWidth: 1, borderColor: Colors.brand.neonPink + '40' },
+  endBtnText: { color: Colors.brand.neonPink + 'CC', fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
 
   chipOuter: { alignItems: 'center', marginBottom: 10 },
   chipGradient: { borderRadius: 28, padding: 1.5 },
@@ -314,15 +372,17 @@ const s = StyleSheet.create({
   chipLabel: { color: Colors.text.muted, fontSize: 9, fontWeight: '700', letterSpacing: 3 },
   chipName: { color: Colors.text.primary, fontSize: 26, letterSpacing: 2, lineHeight: 30 },
 
-  sparkWrap: { alignItems: 'center', marginBottom: 14 },
-  sparkLine: { height: 1, width: '80%' },
+  dividerWrap: { alignItems: 'center', marginBottom: 14 },
+  divider: { height: 1, width: '80%' },
 
   main: { flex: 1, gap: 10 },
 
-  todWrap: { flex: 1, justifyContent: 'center' },
+  todOuter: { flex: 1, justifyContent: 'center', gap: 12 },
+  swipeHintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  swipeHint: { fontSize: 11, fontWeight: '800', letterSpacing: 1, opacity: 0.7 },
+  swipeHintMid: { color: Colors.text.muted, fontSize: 10, fontWeight: '600' },
   todGrid: { flexDirection: 'row', gap: 14 },
 
-  // Timer with adjustment
   timerBlock: { alignItems: 'center', gap: 10, paddingTop: 8 },
   timerRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   timerAdj: {
@@ -330,20 +390,21 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: Colors.brand.crimson + '60',
     backgroundColor: 'rgba(232,64,64,0.08)',
   },
-  timerAdjAdd: { borderColor: '#6FCF4A' + '60', backgroundColor: 'rgba(63,207,74,0.08)' },
+  timerAdjAdd: { borderColor: '#6FCF4A60', backgroundColor: 'rgba(63,207,74,0.08)' },
   timerAdjText: { color: Colors.brand.crimson, fontSize: 14, fontWeight: '800', letterSpacing: 0.5 },
   skipTimer: { paddingVertical: 10, paddingHorizontal: 28, borderRadius: 22, borderWidth: 1.5, borderColor: Colors.text.muted + '55' },
   skipTimerText: { color: Colors.text.muted, fontSize: 13, fontWeight: '600', letterSpacing: 1 },
 });
 
 const tod = StyleSheet.create({
-  wrap:  { flex: 1 },
+  wrap: { flex: 1 },
+  touchable: { borderRadius: 22, overflow: 'hidden', flex: 1 },
   card: {
-    borderRadius: 20, borderWidth: 1.5, paddingVertical: 44, paddingHorizontal: 12,
-    alignItems: 'center', gap: 12, overflow: 'hidden', position: 'relative',
+    borderRadius: 22, borderWidth: 1.5, paddingVertical: 44, paddingHorizontal: 12,
+    alignItems: 'center', gap: 12, overflow: 'hidden', position: 'relative', flex: 1,
   },
-  strip:   { position: 'absolute', top: 0, bottom: 0, left: 0, width: 3, opacity: 0.85 },
-  shimmer: { position: 'absolute', top: 0, bottom: 0, width: 50, backgroundColor: 'rgba(255,255,255,0.10)' },
+  strip:   { position: 'absolute', top: 0, bottom: 0, left: 0, width: 3, opacity: 0.8 },
+  shimmer: { position: 'absolute', top: 0, bottom: 0, width: 50, backgroundColor: 'rgba(255,255,255,0.07)' },
   emoji:   { fontSize: 38 },
   label:   { fontSize: 28, letterSpacing: 4, lineHeight: 32 },
 });

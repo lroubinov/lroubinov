@@ -75,6 +75,9 @@ const translations: Record<Lang, Record<string, string>> = {
     importPrizes: 'Import Prizes CSV',
     prizeCsvHelp: 'Format: individual,prize text  or  collaborative,prize text',
     prizeCsvPlaceholder: 'individual,Winner chooses the drink\ncollaborative,Dance together...',
+    getPrize: '🎡 Spin for a Prize!',
+    getPrizeDraw: '🎡 Spin for a Shared Prize!',
+    swipeHintTruth: '← TRUTH', swipeHintDare: 'DARE →', swipeHint: 'or swipe',
   },
   he: {
     tagline: 'הלילה שלכם. החוקים שלכם.',
@@ -150,6 +153,9 @@ const translations: Record<Lang, Record<string, string>> = {
     importPrizes: 'ייבא פרסים CSV',
     prizeCsvHelp: 'פורמט: individual,טקסט פרס  או  collaborative,טקסט',
     prizeCsvPlaceholder: 'individual,המנצח בוחר את המשקה\ncollaborative,ריקוד ביחד...',
+    getPrize: '🎡 סובב/י לקבלת פרס!',
+    getPrizeDraw: '🎡 סובבו לקבלת פרס משותף!',
+    swipeHintTruth: 'אמת ←', swipeHintDare: '→ חובה', swipeHint: 'או החלק/י',
   },
 };
 

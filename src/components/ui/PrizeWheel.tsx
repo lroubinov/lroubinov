@@ -4,10 +4,7 @@ import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'reac
 import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
 import { Sounds } from '../../utils/sounds';
 
-const RADIUS = 130;
-const CX = RADIUS + 10;
-const CY = RADIUS + 10;
-const SIZE = (RADIUS + 10) * 2;
+const DEFAULT_RADIUS = 130;
 
 const SEGMENT_COLORS = [
   '#E84040', '#FF8500', '#7B2FBE', '#E040A0', '#2FBEC8',
@@ -30,9 +27,15 @@ interface Props {
   prizes: string[];
   spinLabel: string;
   onComplete: (prize: string) => void;
+  radius?: number;
 }
 
-export default function PrizeWheel({ prizes, spinLabel, onComplete }: Props) {
+export default function PrizeWheel({ prizes, spinLabel, onComplete, radius: radiusProp }: Props) {
+  const RADIUS = radiusProp ?? DEFAULT_RADIUS;
+  const CX = RADIUS + 10;
+  const CY = RADIUS + 10;
+  const SIZE = (RADIUS + 10) * 2;
+
   const n = prizes.length;
   const segAngle = 360 / n;
   const rotation = useRef(new Animated.Value(0)).current;

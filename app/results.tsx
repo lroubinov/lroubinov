@@ -1,22 +1,124 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Animated, Dimensions, ScrollView, StyleSheet,
+  Text, TouchableOpacity, View,
+} from 'react-native';
 import GradientBackground from '../src/components/ui/GradientBackground';
 import ParticleBackground from '../src/components/ui/ParticleBackground';
-import PrizeWheel from '../src/components/ui/PrizeWheel';
 import { Colors } from '../src/constants/colors';
-import { defaultPrizes } from '../src/data/prizes';
 import { HistoryEntry } from '../src/data/types';
 import { tr } from '../src/i18n';
 import { Sounds } from '../src/utils/sounds';
 import { useGameStore } from '../src/store/gameStore';
 
-const RESULT_ICON: Record<HistoryEntry['result'], string> = {
-  done:    '✓',
-  skipped: '→',
-  forfeit: '⚡',
-};
+const { width: SW, height: SH } = Dimensions.get('window');
+
+// ─── Confetti ─────────────────────────────────────────────────────────────────
+
+const CONFETTI_COLORS = [
+  Colors.brand.neonPink, Colors.brand.gold, Colors.brand.neonBlue,
+  '#7B2FBE', '#FF4500', '#3ECF4C', '#FF8500',
+];
+
+interface Particle {
+  x: Animated.Value;
+  y: Animated.Value;
+  opacity: Animated.Value;
+  rotation: Animated.Value;
+  color: string;
+  size: number;
+  shape: 'square' | 'circle' | 'rect';
+}
+
+function Confetti() {
+  const particles = useRef<Particle[]>(
+    Array.from({ length: 50 }, (_, i) => {
+      const fromLeft = i < 25;
+      return {
+        x:        new Animated.Value(fromLeft ? -30 : SW + 30),
+        y:        new Animated.Value(-60 - Math.random() * 80),
+        opacity:  new Animated.Value(1),
+        rotation: new Animated.Value(0),
+        color:    CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+        size:     Math.random() * 9 + 6,
+        shape:    (['square', 'circle', 'rect'] as const)[Math.floor(Math.random() * 3)],
+      };
+    })
+  ).current;
+
+  useEffect(() => {
+    particles.forEach((p, i) => {
+      const fromLeft = i < 25;
+      const targetX  = fromLeft
+        ? SW * (0.1 + Math.random() * 0.9)
+        : SW * (Math.random() * 0.9);
+      const delay = i * 40;
+
+      Animated.parallel([
+        Animated.timing(p.x, {
+          toValue: targetX,
+          duration: 1400 + Math.random() * 800,
+          delay,
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.timing(p.y, {
+            toValue: Math.random() * SH * 0.55 + 80,
+            duration: 1000 + Math.random() * 600,
+            delay,
+            useNativeDriver: true,
+          }),
+          Animated.timing(p.y, {
+            toValue: SH + 60,
+            duration: 700 + Math.random() * 400,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(p.opacity, {
+          toValue: 0,
+          duration: 2400 + Math.random() * 400,
+          delay,
+          useNativeDriver: true,
+        }),
+        Animated.timing(p.rotation, {
+          toValue: 4,
+          duration: 2200 + Math.random() * 600,
+          delay,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+  }, []);
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {particles.map((p, i) => {
+        const rotate = p.rotation.interpolate({ inputRange: [0, 4], outputRange: ['0deg', '1440deg'] });
+        const isRect = p.shape === 'rect';
+        return (
+          <Animated.View
+            key={i}
+            style={{
+              position: 'absolute',
+              width:  isRect ? p.size * 1.8 : p.size,
+              height: p.size,
+              borderRadius: p.shape === 'circle' ? p.size / 2 : 2,
+              backgroundColor: p.color,
+              transform: [{ translateX: p.x }, { translateY: p.y }, { rotate }],
+              opacity: p.opacity,
+            }}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+// ─── History row ──────────────────────────────────────────────────────────────
+
+const RESULT_ICON: Record<HistoryEntry['result'], string> = { done: '✓', skipped: '→', forfeit: '⚡' };
 const RESULT_COLOR: Record<HistoryEntry['result'], string> = {
   done:    '#6FCF4A',
   skipped: Colors.brand.gold,
@@ -25,9 +127,7 @@ const RESULT_COLOR: Record<HistoryEntry['result'], string> = {
 const TYPE_EMOJI: Record<string, string> = { truth: '💬', dare: '🔥' };
 
 function HistoryRow({ entry, t }: { entry: HistoryEntry; t: (k: string) => string }) {
-  const resultLabel = entry.result === 'done'
-    ? t('historyDone') : entry.result === 'skipped'
-    ? t('historySkipped') : t('historyForfeit');
+  const label = entry.result === 'done' ? t('historyDone') : entry.result === 'skipped' ? t('historySkipped') : t('historyForfeit');
   const color = RESULT_COLOR[entry.result];
   return (
     <View style={h.row}>
@@ -38,7 +138,7 @@ function HistoryRow({ entry, t }: { entry: HistoryEntry; t: (k: string) => strin
         <Text style={h.cardText} numberOfLines={1}>{entry.cardText}</Text>
       </View>
       <View style={[h.badge, { borderColor: color + '60', backgroundColor: color + '15' }]}>
-        <Text style={[h.badgeText, { color }]}>{RESULT_ICON[entry.result]} {resultLabel}</Text>
+        <Text style={[h.badgeText, { color }]}>{RESULT_ICON[entry.result]} {label}</Text>
       </View>
     </View>
   );
@@ -55,29 +155,34 @@ const h = StyleSheet.create({
   badgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
 });
 
+// ─── Results screen ───────────────────────────────────────────────────────────
+
 export default function ResultsScreen() {
   const { gameState, resetGame, startGame, language, customPrizes } = useGameStore();
   const t = (key: string) => tr(language, key);
 
   const [showHistory, setShowHistory] = useState(false);
-  const [wonPrize, setWonPrize]       = useState<string | null>(null);
 
-  const winnerScale   = useRef(new Animated.Value(0.6)).current;
+  const winnerScale   = useRef(new Animated.Value(0.55)).current;
   const winnerOpacity = useRef(new Animated.Value(0)).current;
-  const p1Scale = useRef(new Animated.Value(0.8)).current;
-  const p2Scale = useRef(new Animated.Value(0.8)).current;
+  const crownBounce   = useRef(new Animated.Value(-20)).current;
+  const p1Scale = useRef(new Animated.Value(0.75)).current;
+  const p2Scale = useRef(new Animated.Value(0.75)).current;
+  const btnScale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.sequence([
-      Animated.delay(150),
+      Animated.delay(200),
       Animated.parallel([
-        Animated.spring(winnerScale,   { toValue: 1, damping: 10, useNativeDriver: true }),
-        Animated.timing(winnerOpacity, { toValue: 1, duration: 350, useNativeDriver: true }),
+        Animated.spring(winnerScale,   { toValue: 1, damping: 9, stiffness: 80, useNativeDriver: true }),
+        Animated.timing(winnerOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.spring(crownBounce,   { toValue: 0, damping: 7, stiffness: 100, useNativeDriver: true }),
       ]),
       Animated.parallel([
-        Animated.spring(p1Scale, { toValue: 1, damping: 12, useNativeDriver: true }),
-        Animated.spring(p2Scale, { toValue: 1, damping: 12, useNativeDriver: true }),
+        Animated.spring(p1Scale, { toValue: 1, damping: 11, useNativeDriver: true }),
+        Animated.spring(p2Scale, { toValue: 1, damping: 11, delay: 80, useNativeDriver: true } as any),
       ]),
+      Animated.spring(btnScale, { toValue: 1, damping: 9, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -88,32 +193,31 @@ export default function ResultsScreen() {
   const winner   = isDraw ? null : p1.score > p2.score ? p1 : p2;
   const history  = gameState.history ?? [];
 
-  // Resolve prizes: use custom if any, else defaults
-  const allPrizes = customPrizes.length > 0 ? customPrizes : defaultPrizes;
-  const langPrizes = allPrizes.filter(p => p.lang === language);
-  const individualPrizes    = langPrizes.filter(p => !p.collaborative).map(p => p.text);
-  const collaborativePrizes = langPrizes.filter(p => p.collaborative).map(p => p.text);
-  const wheelPrizes = isDraw ? collaborativePrizes : individualPrizes;
-
   const handlePlayAgain = () => { Sounds.playClick(); startGame(); router.replace('/game'); };
   const handleNewGame   = () => { Sounds.playClick(); resetGame(); router.replace('/'); };
+  const handlePrize     = () => { Sounds.playClick(); router.push('/prize' as any); };
 
   return (
     <GradientBackground colors={Colors.gradient.splash}>
       <ParticleBackground />
+      <Confetti />
+
       <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
 
         {/* Title */}
         <Text style={[s.title, { fontFamily: 'BebasNeue_400Regular' }]}>{t('gameOver')}</Text>
 
         {/* Winner card */}
-        <Animated.View style={{ opacity: winnerOpacity, transform: [{ scale: winnerScale }], width: '100%' }}>
+        <Animated.View style={[s.winnerWrap, { opacity: winnerOpacity, transform: [{ scale: winnerScale }] }]}>
           <LinearGradient
-            colors={isDraw ? [Colors.brand.neonPink + '20', Colors.brand.neonBlue + '10'] : ['rgba(255,213,96,0.12)', 'rgba(255,133,0,0.06)']}
+            colors={isDraw
+              ? ['rgba(255,79,163,0.18)', 'rgba(61,214,245,0.10)']
+              : ['rgba(255,213,96,0.18)', 'rgba(255,133,0,0.08)']}
             style={s.winnerCard}
           >
-            <View style={[s.winnerBorder, { borderColor: isDraw ? Colors.brand.neonPink + '50' : Colors.brand.gold + '60' }]} />
+            <View style={[s.winnerBorder, { borderColor: isDraw ? Colors.brand.neonPink + '55' : Colors.brand.gold + '65' }]} />
             <View style={s.winnerShine} />
+
             {isDraw ? (
               <>
                 <Text style={s.bigEmoji}>💋</Text>
@@ -122,7 +226,7 @@ export default function ResultsScreen() {
               </>
             ) : (
               <>
-                <Text style={s.bigEmoji}>👑</Text>
+                <Animated.Text style={[s.bigEmoji, { transform: [{ translateY: crownBounce }] }]}>👑</Animated.Text>
                 <Text style={[s.winnerLabel, { fontFamily: 'Exo2_700Bold' }]}>{t('winner')}</Text>
                 <Text style={[s.winnerName, { fontFamily: 'BebasNeue_400Regular' }]}>{winner!.name}</Text>
                 <Text style={[s.winnerScore, { fontFamily: 'Exo2_700Bold' }]}>{winner!.score} {t('pts')}</Text>
@@ -133,7 +237,7 @@ export default function ResultsScreen() {
 
         {/* Spark divider */}
         <LinearGradient
-          colors={['transparent', Colors.brand.fireHot, Colors.brand.gold, Colors.brand.fireHot, 'transparent']}
+          colors={['transparent', Colors.brand.neonPink + '60', Colors.brand.gold + '80', Colors.brand.neonPink + '60', 'transparent']}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
           style={s.spark}
         />
@@ -159,32 +263,22 @@ export default function ResultsScreen() {
           </Animated.View>
         </View>
 
-        {/* Prize wheel */}
-        {wheelPrizes.length > 0 && (
-          <View style={s.prizeSection}>
-            <Text style={[s.prizeSectionTitle, { fontFamily: 'Exo2_700Bold' }]}>
-              {isDraw ? t('spinCollaborative') : t('spinForPrize')}
-            </Text>
-            {wonPrize ? (
-              <View style={s.prizeResult}>
-                <Text style={s.prizeResultEmoji}>🎁</Text>
-                <Text style={[s.prizeResultLabel, { fontFamily: 'Exo2_700Bold' }]}>
-                  {isDraw ? t('collaborativePrize') : t('yourPrize')}
-                </Text>
-                <Text style={[s.prizeResultText, { fontFamily: 'BebasNeue_400Regular' }]}>{wonPrize}</Text>
-                <TouchableOpacity onPress={() => setWonPrize(null)} style={s.spinAgainBtn}>
-                  <Text style={s.spinAgainText}>{t('spinAgain')}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <PrizeWheel
-                prizes={wheelPrizes}
-                spinLabel={t('spinBtn')}
-                onComplete={(prize) => { Sounds.playDone(); setWonPrize(prize); }}
-              />
-            )}
-          </View>
-        )}
+        {/* Prize button */}
+        <Animated.View style={[s.prizeWrap, { transform: [{ scale: btnScale }] }]}>
+          <TouchableOpacity onPress={handlePrize} activeOpacity={0.88} style={s.prizeTouchable}>
+            <LinearGradient
+              colors={['#6B0080', '#A0009A', '#C2005A', '#E8256A']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={s.prizeBtn}
+            >
+              <View style={s.prizeBtnShine} />
+              <Text style={s.prizeEmoji}>🎡</Text>
+              <Text style={[s.prizeBtnText, { fontFamily: 'BebasNeue_400Regular' }]}>
+                {isDraw ? t('getPrizeDraw') : t('getPrize')}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Turn history */}
         {history.length > 0 && (
@@ -227,18 +321,23 @@ const s = StyleSheet.create({
 
   title: { color: Colors.brand.gold, fontSize: 52, letterSpacing: 4, textAlign: 'center', lineHeight: 56 },
 
+  winnerWrap: { width: '100%' },
   winnerCard: {
-    borderRadius: 24, padding: 32, alignItems: 'center', gap: 6,
+    borderRadius: 26, padding: 32, alignItems: 'center', gap: 6,
     width: '100%', overflow: 'hidden', position: 'relative',
   },
-  winnerBorder: { position: 'absolute', inset: 0, borderRadius: 24, borderWidth: 1.5 } as any,
-  winnerShine: { position: 'absolute', top: 0, left: 0, right: 0, height: '35%', backgroundColor: 'rgba(255,255,255,0.06)', borderTopLeftRadius: 24, borderTopRightRadius: 24 },
-  bigEmoji: { fontSize: 52 },
+  winnerBorder: { position: 'absolute', inset: 0, borderRadius: 26, borderWidth: 1.5 } as any,
+  winnerShine: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: '40%',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderTopLeftRadius: 26, borderTopRightRadius: 26,
+  },
+  bigEmoji: { fontSize: 54 },
   winnerLabel: { color: Colors.text.muted, fontSize: 11, letterSpacing: 3, textTransform: 'uppercase' },
-  winnerName: { color: Colors.brand.gold, fontSize: 42, letterSpacing: 3, lineHeight: 46, textAlign: 'center' },
+  winnerName: { color: Colors.brand.gold, fontSize: 44, letterSpacing: 3, lineHeight: 48, textAlign: 'center' },
   winnerScore: { color: Colors.text.secondary, fontSize: 16 },
   drawText: { color: Colors.brand.neonPink, fontSize: 40, letterSpacing: 2 },
-  drawSub: { color: Colors.text.secondary, fontSize: 14 },
+  drawSub:  { color: Colors.text.secondary, fontSize: 14 },
 
   spark: { height: 1, width: '80%' },
 
@@ -251,15 +350,20 @@ const s = StyleSheet.create({
   vsWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
   vs: { color: Colors.text.muted, fontSize: 16, letterSpacing: 1 },
 
-  // Prize wheel
-  prizeSection: { width: '100%', gap: 14, alignItems: 'center', paddingVertical: 12, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  prizeSectionTitle: { color: Colors.brand.gold, fontSize: 15, letterSpacing: 1, textAlign: 'center' },
-  prizeResult: { alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 16 },
-  prizeResultEmoji: { fontSize: 48 },
-  prizeResultLabel: { color: Colors.text.muted, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' },
-  prizeResultText: { color: Colors.brand.gold, fontSize: 28, letterSpacing: 2, textAlign: 'center', lineHeight: 34 },
-  spinAgainBtn: { marginTop: 8, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 16, borderWidth: 1.5, borderColor: Colors.text.muted + '50' },
-  spinAgainText: { color: Colors.text.muted, fontSize: 13, fontWeight: '700' },
+  // Prize button
+  prizeWrap: { width: '100%' },
+  prizeTouchable: { borderRadius: 24, overflow: 'hidden' },
+  prizeBtn: {
+    paddingVertical: 22, borderRadius: 24, alignItems: 'center',
+    overflow: 'hidden', position: 'relative', gap: 4,
+  },
+  prizeBtnShine: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: '40%',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+  },
+  prizeEmoji: { fontSize: 32 },
+  prizeBtnText: { color: '#fff', fontSize: 24, letterSpacing: 3 },
 
   historySection: { width: '100%', gap: 10 },
   historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
@@ -268,7 +372,7 @@ const s = StyleSheet.create({
   historyList: { gap: 6 },
 
   buttons: { width: '100%', gap: 12, marginTop: 4 },
-  primaryBtn: { borderRadius: 20, overflow: 'hidden', shadowColor: Colors.brand.fire, shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 6 } },
+  primaryBtn: { borderRadius: 20, overflow: 'hidden' },
   primaryBtnGrad: { paddingVertical: 18, alignItems: 'center', justifyContent: 'center' },
   primaryBtnText: { color: '#fff', fontSize: 28, letterSpacing: 4 },
   secondaryBtn: { paddingVertical: 14, borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)' },
