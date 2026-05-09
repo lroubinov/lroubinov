@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Animated, PanResponder, SafeAreaView, StyleSheet,
+  Animated, SafeAreaView, StyleSheet,
   Text, TouchableOpacity, View,
 } from 'react-native';
 import ActionButtons from '../src/components/game/ActionButtons';
@@ -17,9 +17,9 @@ import { tr } from '../src/i18n';
 import { Sounds } from '../src/utils/sounds';
 import { useGameStore } from '../src/store/gameStore';
 
-// ─── TOD choice card ─────────────────────────────────────────────────────────
+// ─── TOD choice buttons ───────────────────────────────────────────────────────
 
-interface TODCardProps {
+interface TODBtnProps {
   type: 'truth' | 'dare';
   label: string;
   subtitle: string;
@@ -27,57 +27,61 @@ interface TODCardProps {
   exitAnim: Animated.Value;
 }
 
-function TODCard({ type, label, subtitle, onPress, exitAnim }: TODCardProps) {
-  const pulse   = useRef(new Animated.Value(1)).current;
-  const glow    = useRef(new Animated.Value(0.4)).current;
-  const shimmer = useRef(new Animated.Value(-220)).current;
+function TODButton({ type, label, subtitle, onPress, exitAnim }: TODBtnProps) {
+  const scale   = useRef(new Animated.Value(1)).current;
+  const glow    = useRef(new Animated.Value(0.5)).current;
+  const shimmer = useRef(new Animated.Value(-300)).current;
 
   useEffect(() => {
     Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1.04, duration: 1400, useNativeDriver: true }),
-      Animated.timing(pulse, { toValue: 1,    duration: 1400, useNativeDriver: true }),
+      Animated.timing(glow,  { toValue: 1,   duration: 1500, useNativeDriver: true }),
+      Animated.timing(glow,  { toValue: 0.5, duration: 1500, useNativeDriver: true }),
     ])).start();
     Animated.loop(Animated.sequence([
-      Animated.timing(glow, { toValue: 1,   duration: 1600, useNativeDriver: true }),
-      Animated.timing(glow, { toValue: 0.4, duration: 1600, useNativeDriver: true }),
-    ])).start();
-    Animated.loop(Animated.sequence([
-      Animated.timing(shimmer, { toValue: 260, duration: 2400, useNativeDriver: true }),
-      Animated.delay(2000),
-      Animated.timing(shimmer, { toValue: -220, duration: 0, useNativeDriver: true }),
+      Animated.timing(shimmer, { toValue: 400, duration: 2600, useNativeDriver: true }),
+      Animated.delay(2200),
+      Animated.timing(shimmer, { toValue: -300, duration: 0, useNativeDriver: true }),
     ])).start();
   }, []);
+
+  const handlePress = () => {
+    Animated.sequence([
+      Animated.timing(scale, { toValue: 0.94, duration: 80, useNativeDriver: true }),
+      Animated.timing(scale, { toValue: 1,    duration: 160, useNativeDriver: true }),
+    ]).start();
+    type === 'truth' ? Sounds.playClick() : Sounds.playDare();
+    onPress();
+  };
 
   const isTruth = type === 'truth';
   const accent  = isTruth ? Colors.brand.neonBlue : Colors.brand.neonPink;
   const icon    = isTruth ? '😇' : '😈';
-  const bgTop   = isTruth ? 'rgba(61,214,245,0.18)' : 'rgba(255,79,163,0.20)';
-  const bgBot   = isTruth ? 'rgba(20,60,100,0.08)'  : 'rgba(120,0,60,0.08)';
+  const gradColors: [string, string, string] = isTruth
+    ? ['rgba(61,214,245,0.22)', 'rgba(61,214,245,0.10)', 'rgba(10,30,60,0.05)']
+    : ['rgba(255,79,163,0.28)', 'rgba(255,79,163,0.12)', 'rgba(80,0,40,0.05)'];
 
   return (
-    <Animated.View style={[tod.wrap, { transform: [{ scale: Animated.multiply(exitAnim, pulse) }], opacity: exitAnim }]}>
-      {/* Outer glow ring */}
-      <Animated.View style={[tod.glowRing, { borderColor: accent, opacity: glow }]} />
+    <Animated.View style={[tod.wrap, { transform: [{ scale: Animated.multiply(scale, exitAnim) }], opacity: exitAnim }]}>
+      {/* Outer glow */}
+      <Animated.View style={[tod.glow, { shadowColor: accent, opacity: glow }]} />
 
-      <TouchableOpacity
-        onPress={() => { isTruth ? Sounds.playClick() : Sounds.playDare(); onPress(); }}
-        activeOpacity={0.88}
-        style={tod.touchable}
-      >
-        <LinearGradient
-          colors={[bgTop, bgBot]}
-          start={{ x: 0, y: 0 }} end={{ x: 0.6, y: 1 }}
-          style={[tod.card, { borderColor: accent + '70' }]}
-        >
-          {/* Glass shine */}
+      <TouchableOpacity onPress={handlePress} activeOpacity={1} style={tod.touchable}>
+        <LinearGradient colors={gradColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[tod.btn, { borderColor: accent + '80' }]}>
+          {/* Top shine */}
           <View style={tod.shine} />
-          {/* Shimmer sweep */}
+          {/* Shimmer */}
           <Animated.View style={[tod.shimmer, { transform: [{ translateX: shimmer }, { skewX: '-20deg' }] }]} />
+          {/* Left accent bar */}
+          <View style={[tod.bar, { backgroundColor: accent }]} />
 
-          <Text style={tod.icon}>{icon}</Text>
-          <Text style={[tod.label, { color: accent, fontFamily: 'BebasNeue_400Regular' }]}>{label}</Text>
-          <View style={[tod.divider, { backgroundColor: accent + '55' }]} />
-          <Text style={[tod.sub, { color: accent + 'AA' }]}>{subtitle}</Text>
+          <View style={tod.content}>
+            <Text style={tod.icon}>{icon}</Text>
+            <View style={tod.textWrap}>
+              <Text style={[tod.label, { color: accent, fontFamily: 'BebasNeue_400Regular' }]}>{label}</Text>
+              <Text style={[tod.sub, { color: accent + 'AA' }]}>{subtitle}</Text>
+            </View>
+            <Text style={[tod.arrow, { color: accent + '80' }]}>›</Text>
+          </View>
         </LinearGradient>
       </TouchableOpacity>
     </Animated.View>
@@ -175,19 +179,7 @@ export default function GameScreen() {
     });
   };
 
-  // Swipe gesture on the TOD choosing area
-  const swipePan = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 12 && Math.abs(g.dy) < 60,
-      onPanResponderRelease: (_, g) => {
-        if (Math.abs(g.dx) > 55) {
-          if (g.dx > 0) handleTypeSelect('dare');
-          else          handleTypeSelect('truth');
-        }
-      },
-    })
-  ).current;
+
 
   const handleTimerComplete = () => { onTimerComplete(); };
 
@@ -307,18 +299,11 @@ export default function GameScreen() {
               />
             </View>
 
-            {/* TOD choosing + swipe */}
+            {/* TOD choosing */}
             {isChoosing && (
-              <View style={s.todOuter} {...swipePan.panHandlers}>
-                <View style={s.todGrid}>
-                  <TODCard type="truth" label={t('truth')} subtitle={language === 'he' ? 'ספר/י את האמת' : 'Confess it all'} onPress={() => handleTypeSelect('truth')} exitAnim={todExit} />
-                  <TODCard type="dare"  label={t('dare')}  subtitle={language === 'he' ? 'אם תעיז...' : 'If you dare...'} onPress={() => handleTypeSelect('dare')}  exitAnim={todExit} />
-                </View>
-                <View style={s.swipeHintRow}>
-                  <Text style={[s.swipeHint, { color: Colors.brand.neonBlue }]}>{'← ' + t('truth')}</Text>
-                  <Text style={s.swipeHintMid}>{t('swipeHint')}</Text>
-                  <Text style={[s.swipeHint, { color: Colors.brand.neonPink }]}>{t('dare') + ' →'}</Text>
-                </View>
+              <View style={s.todOuter}>
+                <TODButton type="truth" label={t('truth')} subtitle={language === 'he' ? 'ספר/י את האמת' : 'Confess it all'} onPress={() => handleTypeSelect('truth')} exitAnim={todExit} />
+                <TODButton type="dare"  label={t('dare')}  subtitle={language === 'he' ? 'אם תעיז...' : 'If you dare...'} onPress={() => handleTypeSelect('dare')}  exitAnim={todExit} />
               </View>
             )}
 
@@ -392,11 +377,7 @@ const s = StyleSheet.create({
 
   main: { flex: 1, gap: 10 },
 
-  todOuter: { flex: 1, justifyContent: 'center', gap: 14 },
-  swipeHintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 4 },
-  swipeHint: { fontSize: 13, fontWeight: '800', letterSpacing: 1.5, opacity: 0.65 },
-  swipeHintMid: { color: Colors.text.muted, fontSize: 11, fontWeight: '600', opacity: 0.5 },
-  todGrid: { flexDirection: 'row', gap: 14 },
+  todOuter: { flex: 1, justifyContent: 'center', gap: 16 },
 
   timerBlock: { alignItems: 'center', gap: 10, paddingTop: 8 },
   timerRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
@@ -412,25 +393,21 @@ const s = StyleSheet.create({
 });
 
 const tod = StyleSheet.create({
-  wrap: { flex: 1, position: 'relative' },
-  glowRing: {
-    position: 'absolute', inset: -6, borderRadius: 28,
-    borderWidth: 2, zIndex: 0,
-  } as any,
-  touchable: { borderRadius: 22, overflow: 'hidden', flex: 1, zIndex: 1 },
-  card: {
+  wrap:     { width: '100%', position: 'relative' },
+  glow:     { position: 'absolute', inset: 0, borderRadius: 22, shadowOpacity: 0.6, shadowRadius: 20, shadowOffset: { width: 0, height: 0 } } as any,
+  touchable:{ borderRadius: 22, overflow: 'hidden', width: '100%' },
+  btn: {
     borderRadius: 22, borderWidth: 1.5,
-    paddingTop: 32, paddingBottom: 28, paddingHorizontal: 12,
-    alignItems: 'center', gap: 8, overflow: 'hidden', position: 'relative', flex: 1,
+    paddingVertical: 22, paddingHorizontal: 20,
+    overflow: 'hidden', position: 'relative',
   },
-  shine: {
-    position: 'absolute', top: 0, left: 0, right: 0, height: '40%',
-    backgroundColor: 'rgba(255,255,255,0.09)',
-    borderTopLeftRadius: 22, borderTopRightRadius: 22,
-  },
-  shimmer: { position: 'absolute', top: 0, bottom: 0, width: 60, backgroundColor: 'rgba(255,255,255,0.06)' },
-  icon:    { fontSize: 46, marginBottom: 4 },
-  label:   { fontSize: 32, letterSpacing: 4, lineHeight: 36 },
-  divider: { width: '50%', height: 1, marginVertical: 4 },
-  sub:     { fontSize: 11, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' },
+  shine:   { position: 'absolute', top: 0, left: 0, right: 0, height: '45%', backgroundColor: 'rgba(255,255,255,0.08)', borderTopLeftRadius: 22, borderTopRightRadius: 22 },
+  shimmer: { position: 'absolute', top: 0, bottom: 0, width: 80, backgroundColor: 'rgba(255,255,255,0.06)' },
+  bar:     { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, borderTopLeftRadius: 22, borderBottomLeftRadius: 22 },
+  content: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingLeft: 12 },
+  icon:    { fontSize: 44 },
+  textWrap:{ flex: 1 },
+  label:   { fontSize: 36, letterSpacing: 4, lineHeight: 40 },
+  sub:     { fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 2 },
+  arrow:   { fontSize: 36, fontWeight: '300' },
 });

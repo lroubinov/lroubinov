@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useRef, useState } from 'react';
-import { Animated, Easing, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { Animated, Easing, PanResponder, StyleSheet, View } from 'react-native';
 import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
 import { Sounds } from '../../utils/sounds';
 
@@ -23,14 +23,19 @@ function arcPath(cx: number, cy: number, r: number, startAngle: number, endAngle
   return `M ${cx} ${cy} L ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${r} ${r} 0 ${large} 0 ${end.x.toFixed(2)} ${end.y.toFixed(2)} Z`;
 }
 
+export interface PrizeWheelRef {
+  spin: () => void;
+  isSpinning: boolean;
+}
+
 interface Props {
   prizes: string[];
-  spinLabel: string;
   onComplete: (prize: string) => void;
+  onSpinStart?: () => void;
   radius?: number;
 }
 
-export default function PrizeWheel({ prizes, spinLabel, onComplete, radius: radiusProp }: Props) {
+const PrizeWheel = forwardRef<PrizeWheelRef, Props>(({ prizes, onComplete, onSpinStart, radius: radiusProp }, ref) => {
   const RADIUS = radiusProp ?? DEFAULT_RADIUS;
   const CX = RADIUS + 10;
   const CY = RADIUS + 10;
@@ -41,10 +46,14 @@ export default function PrizeWheel({ prizes, spinLabel, onComplete, radius: radi
   const rotation = useRef(new Animated.Value(0)).current;
   const [spinning, setSpinning] = useState(false);
   const currentRotRef = useRef(0);
+  const spinningRef = useRef(false);
 
   const spin = () => {
-    if (spinning || n === 0) return;
+    if (spinningRef.current || n === 0) return;
+    spinningRef.current = true;
     setSpinning(true);
+    onSpinStart?.();
+
     const winnerIdx = Math.floor(Math.random() * n);
     const segCenter = winnerIdx * segAngle + segAngle / 2;
     const offset = 360 - segCenter;
@@ -63,17 +72,20 @@ export default function PrizeWheel({ prizes, spinLabel, onComplete, radius: radi
     }).start(() => {
       Sounds.stopWheelSpin();
       Sounds.playDing();
+      spinningRef.current = false;
       setSpinning(false);
       currentRotRef.current = target;
       onComplete(prizes[winnerIdx]);
     });
   };
 
-  // Flick / swipe anywhere on the wheel triggers a spin
+  useImperativeHandle(ref, () => ({ spin, isSpinning: spinning }));
+
+  // Flick gesture on wheel → triggers spin
   const flickPan = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => !spinning,
-      onMoveShouldSetPanResponder: (_, g) => !spinning && (Math.abs(g.dx) > 8 || Math.abs(g.dy) > 8),
+      onStartShouldSetPanResponder: () => !spinningRef.current,
+      onMoveShouldSetPanResponder: (_, g) => !spinningRef.current && (Math.abs(g.dx) > 8 || Math.abs(g.dy) > 8),
       onPanResponderRelease: (_, g) => {
         const speed = Math.sqrt(g.vx * g.vx + g.vy * g.vy);
         if (speed > 0.25) spin();
@@ -90,76 +102,55 @@ export default function PrizeWheel({ prizes, spinLabel, onComplete, radius: radi
   if (n === 0) return null;
 
   return (
-    <View style={s.container}>
-      {/* Spin button — rendered FIRST so it appears immediately without waiting for SVG */}
-      <TouchableOpacity onPress={spin} disabled={spinning} activeOpacity={0.85} style={s.spinWrap}>
-        <LinearGradient
-          colors={spinning ? ['#444', '#333'] : ['#FF8500', '#E63000']}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={s.spinBtn}
-        >
-          <Text style={[s.spinText, { fontFamily: 'BebasNeue_400Regular' }]}>{spinLabel}</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-
-      {/* Arrow indicator */}
-      <Text style={s.arrowText}>▼</Text>
-
-      {/* Wheel + flick zone */}
-      <View {...flickPan.panHandlers}>
-        <Animated.View style={{ transform: [{ rotate: rotateStr }] }}>
-          <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-            {prizes.map((prize, i) => {
-              const startAngle = i * segAngle;
-              const endAngle   = startAngle + segAngle;
-              const midAngle   = startAngle + segAngle / 2;
-              const color = SEGMENT_COLORS[i % SEGMENT_COLORS.length];
-              const textR = RADIUS * 0.62;
-              const tp = polarToCartesian(CX, CY, textR, midAngle);
-              const truncated = prize.length > 14 ? prize.slice(0, 13) + '…' : prize;
-              return (
-                <G key={i}>
-                  <Path
-                    d={arcPath(CX, CY, RADIUS, startAngle, endAngle)}
-                    fill={color}
-                    stroke="rgba(0,0,0,0.3)"
-                    strokeWidth={1}
-                  />
-                  <SvgText
-                    x={tp.x}
-                    y={tp.y}
-                    fill="#fff"
-                    fontSize={n > 10 ? 8 : 10}
-                    fontWeight="700"
-                    textAnchor="middle"
-                    alignmentBaseline="middle"
-                    rotation={midAngle - 90}
-                    originX={tp.x}
-                    originY={tp.y}
-                  >
-                    {truncated}
-                  </SvgText>
-                </G>
-              );
-            })}
-            {/* Center hub */}
-            <Path
-              d={`M ${CX} ${CY} m -18 0 a 18 18 0 1 0 36 0 a 18 18 0 1 0 -36 0`}
-              fill="#1A0020"
-              stroke="rgba(255,255,255,0.3)"
-              strokeWidth={1.5}
-            />
-          </Svg>
-        </Animated.View>
-      </View>
+    <View {...flickPan.panHandlers}>
+      <Animated.View style={{ transform: [{ rotate: rotateStr }] }}>
+        <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+          {prizes.map((prize, i) => {
+            const startAngle = i * segAngle;
+            const endAngle   = startAngle + segAngle;
+            const midAngle   = startAngle + segAngle / 2;
+            const color = SEGMENT_COLORS[i % SEGMENT_COLORS.length];
+            const textR = RADIUS * 0.62;
+            const tp = polarToCartesian(CX, CY, textR, midAngle);
+            const truncated = prize.length > 14 ? prize.slice(0, 13) + '…' : prize;
+            return (
+              <G key={i}>
+                <Path
+                  d={arcPath(CX, CY, RADIUS, startAngle, endAngle)}
+                  fill={color}
+                  stroke="rgba(0,0,0,0.3)"
+                  strokeWidth={1}
+                />
+                <SvgText
+                  x={tp.x}
+                  y={tp.y}
+                  fill="#fff"
+                  fontSize={n > 10 ? 8 : 10}
+                  fontWeight="700"
+                  textAnchor="middle"
+                  alignmentBaseline="middle"
+                  rotation={midAngle - 90}
+                  originX={tp.x}
+                  originY={tp.y}
+                >
+                  {truncated}
+                </SvgText>
+              </G>
+            );
+          })}
+          <Path
+            d={`M ${CX} ${CY} m -18 0 a 18 18 0 1 0 36 0 a 18 18 0 1 0 -36 0`}
+            fill="#1A0020"
+            stroke="rgba(255,255,255,0.3)"
+            strokeWidth={1.5}
+          />
+        </Svg>
+      </Animated.View>
     </View>
   );
-}
-
-const s = StyleSheet.create({
-  container: { alignItems: 'center', gap: 8 },
-  arrowText: { color: '#FFD700', fontSize: 22, textShadowColor: '#FFD700', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 },
-  spinWrap: { borderRadius: 22, overflow: 'hidden', width: 160 },
-  spinBtn: { paddingVertical: 16, alignItems: 'center', borderRadius: 22 },
-  spinText: { color: '#fff', fontSize: 26, letterSpacing: 4 },
 });
+
+PrizeWheel.displayName = 'PrizeWheel';
+export default PrizeWheel;
+
+export const s = StyleSheet.create({});
