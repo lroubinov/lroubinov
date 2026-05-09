@@ -169,6 +169,8 @@ export default function GameScreen() {
     setIsExiting(true);
     Animated.timing(todExit, { toValue: 0, duration: 160, useNativeDriver: true }).start(() => {
       selectCardType(type);
+      // Play reveal sound timed to mid-flip
+      setTimeout(() => Sounds.playReveal(type === 'dare'), 220);
       setTimeout(() => cardRef.current?.flip(), 30);
     });
   };

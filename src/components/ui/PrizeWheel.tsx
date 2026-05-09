@@ -50,7 +50,6 @@ export default function PrizeWheel({ prizes, spinLabel, onComplete, radius: radi
     const offset = 360 - segCenter;
     const base = currentRotRef.current;
     const spins = 5 * 360;
-    // Ensure we always go forward and land cleanly on the winner
     const remainder = ((offset - (base % 360)) + 360) % 360;
     const target = base + spins + remainder;
 
@@ -92,10 +91,19 @@ export default function PrizeWheel({ prizes, spinLabel, onComplete, radius: radi
 
   return (
     <View style={s.container}>
+      {/* Spin button — rendered FIRST so it appears immediately without waiting for SVG */}
+      <TouchableOpacity onPress={spin} disabled={spinning} activeOpacity={0.85} style={s.spinWrap}>
+        <LinearGradient
+          colors={spinning ? ['#444', '#333'] : ['#FF8500', '#E63000']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={s.spinBtn}
+        >
+          <Text style={[s.spinText, { fontFamily: 'BebasNeue_400Regular' }]}>{spinLabel}</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
       {/* Arrow indicator */}
-      <View style={s.arrow} pointerEvents="none">
-        <Text style={s.arrowText}>▼</Text>
-      </View>
+      <Text style={s.arrowText}>▼</Text>
 
       {/* Wheel + flick zone */}
       <View {...flickPan.panHandlers}>
@@ -144,25 +152,13 @@ export default function PrizeWheel({ prizes, spinLabel, onComplete, radius: radi
           </Svg>
         </Animated.View>
       </View>
-
-      {/* Spin button */}
-      <TouchableOpacity onPress={spin} disabled={spinning} activeOpacity={0.85} style={s.spinWrap}>
-        <LinearGradient
-          colors={spinning ? ['#444', '#333'] : ['#FF8500', '#E63000']}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={s.spinBtn}
-        >
-          <Text style={[s.spinText, { fontFamily: 'BebasNeue_400Regular' }]}>{spinLabel}</Text>
-        </LinearGradient>
-      </TouchableOpacity>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { alignItems: 'center', gap: 12 },
-  arrow: { zIndex: 10 },
-  arrowText: { color: '#FFD700', fontSize: 24, textShadowColor: '#FFD700', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 },
+  container: { alignItems: 'center', gap: 8 },
+  arrowText: { color: '#FFD700', fontSize: 22, textShadowColor: '#FFD700', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 },
   spinWrap: { borderRadius: 22, overflow: 'hidden', width: 160 },
   spinBtn: { paddingVertical: 16, alignItems: 'center', borderRadius: 22 },
   spinText: { color: '#fff', fontSize: 26, letterSpacing: 4 },

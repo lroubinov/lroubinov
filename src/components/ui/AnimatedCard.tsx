@@ -71,9 +71,9 @@ AnimatedCard.displayName = 'AnimatedCard';
 export default AnimatedCard;
 
 const styles = StyleSheet.create({
-  container: { width: '100%', height: 260 },
+  container: { width: '100%', minHeight: 300, flex: 1 },
   card: {
-    flex: 1, borderRadius: 22, padding: 24,
+    flex: 1, borderRadius: 22, padding: 20,
     borderWidth: 1.5, alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden', position: 'relative',
   },

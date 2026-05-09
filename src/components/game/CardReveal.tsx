@@ -90,13 +90,13 @@ export default function CardReveal({ card, language, myGender, partnerGender }: 
         )}
       </View>
 
-      {/* Spice badge */}
-      <SpiceBadge level={card.level} />
-
-      {/* Card icon (pulsing) */}
-      <Animated.Text style={[styles.cardIcon, { transform: [{ scale: iconPulse }] }]}>
-        {cardIcon}
-      </Animated.Text>
+      {/* Spice badge + icon on one row to save vertical space */}
+      <View style={styles.badgeIconRow}>
+        <SpiceBadge level={card.level} />
+        <Animated.Text style={[styles.cardIcon, { transform: [{ scale: iconPulse }] }]}>
+          {cardIcon}
+        </Animated.Text>
+      </View>
 
       {/* Card text */}
       <Text style={[styles.cardText, language === 'he' && styles.rtl]}>{displayText}</Text>
@@ -112,26 +112,23 @@ export default function CardReveal({ card, language, myGender, partnerGender }: 
 
       {/* Heartbeat line */}
       <HeartbeatLine color={typeColor} />
-
-      {/* Bottom heart */}
-      <Text style={[styles.bottomHeart, { color: typeColor }]}>♡</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { alignItems: 'center', gap: 10, width: '100%', paddingVertical: 4, position: 'relative' },
+  container: { alignItems: 'center', gap: 8, width: '100%', paddingVertical: 2, position: 'relative' },
 
   iconGlow: {
     position: 'absolute',
-    width: 100, height: 100,
-    borderRadius: 50,
-    top: '28%',
+    width: 80, height: 80,
+    borderRadius: 40,
+    top: '25%',
     alignSelf: 'center',
   },
 
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  typeLabel: { fontSize: 22, letterSpacing: 3, lineHeight: 26 },
+  typeLabel: { fontSize: 20, letterSpacing: 3, lineHeight: 24 },
   customBadge: {
     backgroundColor: Colors.brand.gold + '20',
     borderWidth: 1, borderColor: Colors.brand.gold + '80',
@@ -139,22 +136,21 @@ const styles = StyleSheet.create({
   },
   customBadgeText: { color: Colors.brand.gold, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
 
-  cardIcon: { fontSize: 52, marginVertical: 4 },
+  badgeIconRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  cardIcon: { fontSize: 38 },
 
   cardText: {
     color: Colors.text.primary,
-    fontSize: 17, lineHeight: 27,
+    fontSize: 16, lineHeight: 25,
     textAlign: 'center', fontWeight: '500',
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
+    flexShrink: 1,
   },
   rtl: { textAlign: 'right', writingDirection: 'rtl' },
 
   timerRow: {
     borderRadius: 20, borderWidth: 1,
-    paddingHorizontal: 16, paddingVertical: 5,
-    marginTop: 2,
+    paddingHorizontal: 16, paddingVertical: 4,
   },
   timerNote: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
-
-  bottomHeart: { fontSize: 18, marginTop: -4 },
 });

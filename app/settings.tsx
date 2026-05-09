@@ -169,6 +169,7 @@ export default function SettingsScreen() {
   const [prizeCsvMsg, setPrizeCsvMsg]            = useState<{ text: string; ok: boolean } | null>(null);
 
   // Collapsible panels
+  const [showTheme, setShowTheme]     = useState(false);
   const [showCustom, setShowCustom]   = useState(false);
   const [showCsv, setShowCsv]         = useState(false);
   const [showPacks, setShowPacks]     = useState(false);
@@ -269,27 +270,40 @@ export default function SettingsScreen() {
         </View>
 
         {/* ── Theme ── */}
-        <Text style={[styles.sectionLabel, isRtl && styles.rtl]}>{t('themeSection')}</Text>
-        <View style={styles.themeGrid}>
-          {(Object.keys(THEMES) as Theme[]).map(key => {
-            const th = THEMES[key];
-            const active = theme === key;
-            return (
-              <TouchableOpacity
-                key={key}
-                style={[styles.themeBtn, active && { borderColor: th.primary, backgroundColor: th.primary + '22' }]}
-                onPress={() => setTheme(key)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.themeEmoji}>{th.emoji}</Text>
-                <Text style={[styles.themeName, active && { color: th.primary }]}>
-                  {language === 'he' ? th.nameHe : th.name}
-                </Text>
-                {active && <View style={[styles.themeCheck, { backgroundColor: th.primary }]}><Text style={styles.themeCheckText}>✓</Text></View>}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <TouchableOpacity style={styles.sectionHeader} onPress={() => setShowTheme(v => !v)}>
+          <Text style={styles.sectionLabel}>
+            {t('themeSection')}
+            {' '}
+            <Text style={{ color: THEMES[theme].primary, fontWeight: '800' }}>
+              {THEMES[theme].emoji} {language === 'he' ? THEMES[theme].nameHe : THEMES[theme].name}
+            </Text>
+          </Text>
+          <Text style={styles.chevron}>{showTheme ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+        {showTheme && (
+          <View style={[styles.panel, { marginTop: 6 }]}>
+            <View style={styles.themeGrid}>
+              {(Object.keys(THEMES) as Theme[]).map(key => {
+                const th = THEMES[key];
+                const active = theme === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[styles.themeBtn, active && { borderColor: th.primary, backgroundColor: th.primary + '22' }]}
+                    onPress={() => setTheme(key)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.themeEmoji}>{th.emoji}</Text>
+                    <Text style={[styles.themeName, active && { color: th.primary }]}>
+                      {language === 'he' ? th.nameHe : th.name}
+                    </Text>
+                    {active && <View style={[styles.themeCheck, { backgroundColor: th.primary }]}><Text style={styles.themeCheckText}>✓</Text></View>}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* ── Duration ── */}
         <Text style={[styles.sectionLabel, isRtl && styles.rtl]}>{t('durationSection')}</Text>

@@ -25,6 +25,7 @@ export default function ForfeitScreen() {
   const pulse       = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    Sounds.playForfeit();
     Animated.sequence([
       Animated.parallel([
         Animated.timing(titleOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),

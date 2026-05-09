@@ -171,7 +171,8 @@ export default function ResultsScreen() {
   const btnScale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Sounds.playConfetti();
+    Sounds.playWin();
+    setTimeout(() => Sounds.playConfetti(), 600);
   }, []);
 
   useEffect(() => {
