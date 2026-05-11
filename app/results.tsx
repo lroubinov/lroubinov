@@ -168,7 +168,7 @@ export default function ResultsScreen() {
   const crownBounce   = useRef(new Animated.Value(-20)).current;
   const p1Scale = useRef(new Animated.Value(0.75)).current;
   const p2Scale = useRef(new Animated.Value(0.75)).current;
-  const btnScale = useRef(new Animated.Value(0)).current;
+  const btnScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Sounds.playWin();
@@ -187,7 +187,6 @@ export default function ResultsScreen() {
         Animated.spring(p1Scale, { toValue: 1, damping: 11, useNativeDriver: true }),
         Animated.spring(p2Scale, { toValue: 1, damping: 11, delay: 80, useNativeDriver: true } as any),
       ]),
-      Animated.spring(btnScale, { toValue: 1, damping: 9, useNativeDriver: true }),
     ]).start();
   }, []);
 

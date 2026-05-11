@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   SafeAreaView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -18,9 +18,17 @@ export default function PrizeScreen() {
   const t = (k: string) => tr(language, k);
   const isRtl = language === 'he';
 
-  const [wonPrize, setWonPrize] = useState<string | null>(null);
-  const [spinning, setSpinning] = useState(false);
+  const [wonPrize, setWonPrize]   = useState<string | null>(null);
+  const [spinning, setSpinning]   = useState(false);
+  // Mount the SVG wheel only after first paint so the SPIN button appears instantly
+  const [wheelReady, setWheelReady] = useState(false);
   const wheelRef = useRef<PrizeWheelRef>(null);
+
+  useEffect(() => {
+    // One frame delay — button renders immediately, wheel SVG loads after
+    const id = requestAnimationFrame(() => setWheelReady(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   if (!gameState) { router.replace('/'); return null; }
 
@@ -89,32 +97,29 @@ export default function PrizeScreen() {
               <Text style={[s.prizeText, { fontFamily: 'BebasNeue_400Regular' }]}>{wonPrize}</Text>
             </LinearGradient>
 
-            {/* Spin Again */}
             <TouchableOpacity onPress={() => setWonPrize(null)} style={s.spinAgainBtn} activeOpacity={0.85}>
               <LinearGradient colors={['rgba(232,37,106,0.18)', 'rgba(107,0,128,0.12)']} style={s.spinAgainInner}>
                 <Text style={[s.spinAgainText, { fontFamily: 'Exo2_700Bold' }]}>{t('spinAgain')}</Text>
               </LinearGradient>
             </TouchableOpacity>
 
-            {/* Play Again */}
             <TouchableOpacity onPress={handlePlayAgain} style={s.playAgainBtn} activeOpacity={0.85}>
               <LinearGradient colors={['#FF8500', '#FF4500', '#D42800']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.playAgainGrad}>
                 <Text style={[s.playAgainText, { fontFamily: 'BebasNeue_400Regular' }]}>{t('playAgain')}</Text>
               </LinearGradient>
             </TouchableOpacity>
 
-            {/* New Game */}
             <TouchableOpacity onPress={handleNewGame} style={s.newGameBtn} activeOpacity={0.85}>
               <Text style={[s.newGameText, { fontFamily: 'Exo2_700Bold' }]}>{t('newGame')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          /* ── Wheel + SPIN button ── */
+          /* ── Spin section ── */
           <View style={s.wheelOuter}>
-            {/* SPIN button rendered FIRST — appears immediately before SVG loads */}
+            {/* SPIN button — always visible from first frame */}
             <TouchableOpacity
               onPress={handleSpin}
-              disabled={spinning}
+              disabled={spinning || !wheelReady}
               activeOpacity={0.85}
               style={s.spinWrap}
             >
@@ -129,14 +134,16 @@ export default function PrizeScreen() {
 
             <Text style={s.arrowDown}>▼</Text>
 
-            {/* Wheel SVG (renders after button) */}
-            <PrizeWheel
-              ref={wheelRef}
-              prizes={wheelPrizes}
-              onComplete={handleComplete}
-              onSpinStart={() => setSpinning(true)}
-              radius={140}
-            />
+            {/* Wheel — mounts one frame after button to avoid layout delay */}
+            {wheelReady && (
+              <PrizeWheel
+                ref={wheelRef}
+                prizes={wheelPrizes}
+                onComplete={handleComplete}
+                onSpinStart={() => setSpinning(true)}
+                radius={140}
+              />
+            )}
           </View>
         )}
 
@@ -156,14 +163,12 @@ const s = StyleSheet.create({
   spinFor: { color: Colors.brand.gold, fontSize: 16, letterSpacing: 1, textAlign: 'center', paddingHorizontal: 20 },
   winnerName: { color: Colors.brand.neonPink, fontSize: 34, letterSpacing: 2, lineHeight: 38 },
 
-  // Wheel layout
-  wheelOuter: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingBottom: 16 },
+  wheelOuter: { flex: 1, alignItems: 'center', paddingTop: 4, gap: 6, paddingBottom: 16 },
   spinWrap: { borderRadius: 22, overflow: 'hidden', width: 180 },
   spinBtn: { paddingVertical: 18, alignItems: 'center', borderRadius: 22 },
   spinText: { color: '#fff', fontSize: 28, letterSpacing: 4 },
   arrowDown: { color: Colors.brand.gold, fontSize: 20, textShadowColor: Colors.brand.gold, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 },
 
-  // Prize result
   resultOuter: { flex: 1, alignItems: 'center', gap: 14, paddingHorizontal: 24, paddingBottom: 20, justifyContent: 'center' },
   resultCard: {
     width: '100%', borderRadius: 26, padding: 28,
